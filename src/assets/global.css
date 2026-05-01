@@ -1,0 +1,201 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --color-neutral: var(--neutral);
+  --color-panel: var(--panel);
+  --color-panel-header: var(--panel-header);
+}
+
+:root {
+  --radius: 0.5rem;
+  --background: #f0f2f5;
+  --foreground: #0d1117;
+  --card: #ffffff;
+  --card-foreground: #0d1117;
+  --popover: #ffffff;
+  --popover-foreground: #0d1117;
+  --primary: #1677ff;
+  --primary-foreground: #ffffff;
+  --secondary: #e8f0fe;
+  --secondary-foreground: #0d1117;
+  --muted: #f5f7fa;
+  --muted-foreground: #7a8599;
+  --accent: #e6f4ff;
+  --accent-foreground: #0d1117;
+  --destructive: #ff4d4f;
+  --border: #e2e8f0;
+  --input: #e8edf4;
+  --ring: #93c5fd;
+  --chart-1: #1677ff;
+  --chart-2: #00b96b;
+  --chart-3: #faad14;
+  --chart-4: #722ed1;
+  --chart-5: #13c2c2;
+  --up: #f04e35;
+  --down: #0ecb81;
+  --neutral: #7a8599;
+  --panel: #ffffff;
+  --panel-header: #f8fafc;
+}
+
+.dark {
+  --background: #0a0e17;
+  --foreground: #e2e8f0;
+  --card: #111827;
+  --card-foreground: #e2e8f0;
+  --popover: #1a2233;
+  --popover-foreground: #e2e8f0;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #e2e8f0;
+  --muted: #1e293b;
+  --muted-foreground: #64748b;
+  --accent: #1e3a5f;
+  --accent-foreground: #e2e8f0;
+  --destructive: #ff4d4f;
+  --border: rgba(255, 255, 255, 0.08);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #3b82f6;
+  --chart-1: #3b82f6;
+  --chart-2: #0ecb81;
+  --chart-3: #f59e0b;
+  --chart-4: #a855f7;
+  --chart-5: #06b6d4;
+  --up: #f04e35;
+  --down: #0ecb81;
+  --neutral: #64748b;
+  --panel: #111827;
+  --panel-header: #1a2233;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .text-up {
+    color: var(--up);
+  }
+  .text-down {
+    color: var(--down);
+  }
+  .bg-up {
+    background-color: var(--up);
+  }
+  .bg-down {
+    background-color: var(--down);
+  }
+  .border-up {
+    border-color: var(--up);
+  }
+  .border-down {
+    border-color: var(--down);
+  }
+  .bg-panel {
+    background-color: var(--panel);
+  }
+  .bg-panel-header {
+    background-color: var(--panel-header);
+  }
+}
+
+@keyframes ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes pulse-up {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.ticker-animate {
+  animation: ticker-scroll 40s linear infinite;
+}
+
+.pulse-up {
+  animation: pulse-up 1.5s ease-in-out infinite;
+}
+
+.blink {
+  animation: blink 1s step-end infinite;
+}
+
+.candle-bar {
+  transition: opacity 0.15s ease;
+}
+
+.candle-bar:hover {
+  opacity: 0.8;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
