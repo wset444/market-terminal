@@ -9,30 +9,58 @@ type TradeListProps = {
   basePrice?: number;
 };
 
+/** 分笔成功时轮询间隔（ms） */
+const TICK_POLL_OK_MS = 2000;
+/** 分笔失败（含 502）时退避间隔（ms） */
+const TICK_POLL_ERR_MS = 60_000;
+
 /**
- * 逐笔成交：东财 `details` 接口；轮询刷新。
+ * 逐笔成交：东财 `details` 接口；成功时约 2s 刷新，失败时退避为 60s 再试，减轻 502 时请求风暴。
  */
-export default function TradeList({ code, basePrice = 0 }: TradeListProps) {
+export default function TradeList({ code }: TradeListProps) {
   const { t } = useI18n();
   const [ticks, setTicks] = useState<TickRow[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    /**
+     * 步骤：
+     * 1. 请求 `/api/stock/ticks`；`res.ok` 且 `data` 为数组则更新列表并安排 `TICK_POLL_OK_MS` 后再次执行。
+     * 2. 否则（网络错误、非 2xx、体非预期）安排 `TICK_POLL_ERR_MS` 后再试。
+     */
+    const tick = async () => {
+      if (cancelled) return;
+      let nextMs = TICK_POLL_ERR_MS;
       try {
         const res = await fetch(`/api/stock/ticks?code=${encodeURIComponent(code)}&pos=-40`);
-        const j: unknown = await res.json();
-        const data = (j as { data?: TickRow[] }).data;
-        if (!cancelled && Array.isArray(data)) setTicks(data);
+        let j: unknown;
+        try {
+          j = await res.json();
+        } catch {
+          j = null;
+        }
+        if (cancelled) return;
+        const data =
+          j && typeof j === "object" ? (j as { data?: TickRow[] }).data : undefined;
+        if (res.ok && Array.isArray(data)) {
+          setTicks(data);
+          nextMs = TICK_POLL_OK_MS;
+        }
       } catch {
-        /* ignore */
+        /* 保持 nextMs = TICK_POLL_ERR_MS */
+      }
+      if (!cancelled) {
+        timeoutId = setTimeout(() => void tick(), nextMs);
       }
     };
-    void load();
-    const id = setInterval(load, 2000);
+
+    void tick();
+
     return () => {
       cancelled = true;
-      clearInterval(id);
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
     };
   }, [code]);
 

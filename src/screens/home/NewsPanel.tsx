@@ -36,14 +36,16 @@ export default function NewsPanel() {
 
   return (
     <div data-cmp="NewsPanel" className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between border-b border-border bg-panel-header px-3 py-2">
-        <div className="flex items-center gap-1.5">
-          <BellIcon size={12} className="text-up" />
+      <div className="border-border bg-panel-header flex shrink-0 items-center justify-between border-b px-3 py-2">
+        <div className="flex min-w-0 shrink-0 items-center gap-1.5">
+          <BellIcon size={12} className="shrink-0 text-up" />
           <span className="text-xs font-medium text-foreground">{t("news.title")}</span>
-          <span className="rounded-full bg-up px-1.5 py-0.5 text-xs text-white">{items.length}</span>
+          <span className="shrink-0 rounded-full bg-up px-1.5 py-0.5 text-xs leading-none text-white">
+            {items.length}
+          </span>
         </div>
         <a
-          className="text-xs text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground shrink-0 text-xs"
           href="https://www.eastmoney.com/"
           target="_blank"
           rel="noreferrer"

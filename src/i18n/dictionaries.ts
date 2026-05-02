@@ -20,6 +20,8 @@ export type MessageDict = {
   news: Record<string, string>;
   positionTable: Record<string, string>;
   footer: Record<string, string>;
+  /** 顶栏设置下拉：主题、语言、跑马灯与时钟等本地偏好 */
+  settingsPanel: Record<string, string>;
   csgo: Record<string, string>;
 };
 
@@ -111,6 +113,9 @@ export const en: MessageDict = {
     mainSymbol: "Symbol",
     periodKlt: "Period klt",
     terminalShape: "PC web (not a desktop app)",
+    resizeOrderBookAria: "Resize order book column",
+    resizeOrderBookRowAria: "Resize height: order book vs gainers list",
+    resizeRightPanelAria: "Resize right quote panel (money flow, ticks)",
   },
   orderBook: {
     title: "Book",
@@ -195,9 +200,22 @@ export const en: MessageDict = {
     sell: "Sell",
     emptyFavorites:
       "No saved positions. Click the star next to the symbol name above to save; they appear here with local browser storage.",
+    dragHandleAria: "Drag to reorder watchlist row",
+    reorderColumnSrOnly: "Reorder",
   },
   footer: {
     demo: "Demo terminal",
+  },
+  settingsPanel: {
+    title: "Settings",
+    openAria: "Open settings menu",
+    language: "Language",
+    ticker: "Ticker strip",
+    tickerAnimate: "Animated scroll",
+    tickerAnimateHint: "When off, quotes stay static (no horizontal scroll).",
+    clock: "Clock",
+    clockSeconds: "Show seconds",
+    clockSecondsHint: "When off, only hours and minutes update each minute.",
   },
   csgo: {
     headerTag: "CS2 · Steam",
@@ -218,6 +236,11 @@ export const en: MessageDict = {
     popularSub: "CS2 market · search popular",
     popularEmpty: "No popular list (check network / API).",
     selectItemHint: "Search an item above or click a row on the right",
+    resizeLeftColAria: "Resize left panel (order book column)",
+    resizeRightColAria: "Resize right panel (listings, ticks, popular)",
+    resizeOrderBookRowAria: "Resize height: order book vs Steam popular list",
+    resizeRightListingRowAria: "Resize height: listing overview vs sales feed",
+    resizeTicksRowAria: "Resize height: sales feed vs popular list",
     footerApi: "CS2: Steam Community Market (proxy)",
     mainItem: "Item",
     demoDataBanner:
@@ -340,6 +363,9 @@ export const zh: MessageDict = {
     mainSymbol: "主图",
     periodKlt: "周期 klt",
     terminalShape: "终端形态：PC 浏览器 Web（非独立客户端）",
+    resizeOrderBookAria: "拖拽调整五档盘口区域宽度",
+    resizeOrderBookRowAria: "拖拽调整五档与「涨幅榜」区域高度分界",
+    resizeRightPanelAria: "拖拽调整右侧行情区宽度（资金、逐笔）",
   },
   orderBook: {
     title: "盘口",
@@ -423,9 +449,22 @@ export const zh: MessageDict = {
     sell: "卖出",
     emptyFavorites:
       "暂无自选。点击上方股票名称旁的星标即可收藏；列表保存在本机浏览器（localStorage），仅收藏的标的会显示在此处。",
+    dragHandleAria: "拖动以调整自选顺序",
+    reorderColumnSrOnly: "排序",
   },
   footer: {
     demo: "演示终端",
+  },
+  settingsPanel: {
+    title: "页面设置",
+    openAria: "打开设置菜单",
+    language: "语言",
+    ticker: "跑马灯",
+    tickerAnimate: "横向滚动动画",
+    tickerAnimateHint: "关闭后指数/报价条不滚动，减少干扰。",
+    clock: "时钟",
+    clockSeconds: "显示秒",
+    clockSecondsHint: "关闭后仅显示到分，每分钟刷新一次。",
   },
   csgo: {
     headerTag: "CS2 · Steam",
@@ -446,6 +485,11 @@ export const zh: MessageDict = {
     popularSub: "CS2 市场 · popular 排序",
     popularEmpty: "暂无热门列表（请检查网络或接口）。",
     selectItemHint: "在上方搜索饰品，或点击右侧列表",
+    resizeLeftColAria: "拖拽调整左侧五档区域宽度",
+    resizeRightColAria: "拖拽调整右侧挂牌/逐笔/热门区宽度",
+    resizeOrderBookRowAria: "拖拽调整盘口与「Steam 热门」区域高度分界",
+    resizeRightListingRowAria: "拖拽调整「挂牌概览」与「分时成交」区域高度分界",
+    resizeTicksRowAria: "拖拽调整「分析成交」与「Steam 热门」区域高度分界",
     footerApi: "CS2：Steam 社区市场（本机代理）",
     mainItem: "主标的",
     demoDataBanner:

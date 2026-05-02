@@ -45,11 +45,11 @@ export default function CsgoMarketFeedPanel() {
 
   return (
     <div data-cmp="CsgoMarketFeedPanel" className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between border-b border-border bg-panel-header px-3 py-2">
-        <div className="flex items-center gap-1.5">
-          <Link2Icon size={12} className="text-primary" />
+      <div className="border-border bg-panel-header flex shrink-0 items-center justify-between border-b px-3 py-2">
+        <div className="flex min-w-0 shrink-0 items-center gap-1.5">
+          <Link2Icon size={12} className="shrink-0 text-primary" />
           <span className="text-xs font-medium text-foreground">{t("csgo.feedTitle")}</span>
-          <span className="rounded-full bg-primary/20 px-1.5 py-0.5 text-xs text-primary">
+          <span className="shrink-0 rounded-full bg-primary/20 px-1.5 py-0.5 text-xs leading-none text-primary">
             {FEED_ITEMS.length}
           </span>
         </div>

@@ -1,4 +1,5 @@
 import { demoQuote, isDemoFallbackDisabled } from "@/services/csgo/demoFallback";
+import { csgoPicsumIconUrl } from "@/services/csgo/fallbackIconUrl";
 import {
   lookupEconomyIconPath,
   mapPriceOverview,
@@ -20,7 +21,8 @@ export async function fetchCsgoQuoteForApi(marketHashName: string): Promise<Csgo
     steamGetJson(priceOverviewUrl(name)),
     lookupEconomyIconPath(name),
   ]);
-  const iconUrl = iconRaw ? steamEconomyImageUrl(iconRaw) : null;
+  const fromSteam = iconRaw ? steamEconomyImageUrl(iconRaw).trim() : "";
+  const iconUrl = fromSteam || csgoPicsumIconUrl(name);
 
   if (got.ok) {
     const m = mapPriceOverview(got.json, name);

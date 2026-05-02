@@ -1,5 +1,6 @@
 import type { KlineBar } from "@/types/stock";
 import type { CsgoPopularRow, CsgoQuote, CsgoSuggestItem } from "@/types/csgo";
+import { csgoPicsumIconUrl } from "@/services/csgo/fallbackIconUrl";
 
 /**
  * 是否禁止使用 Steam 不可达时的内置演示数据。
@@ -53,7 +54,7 @@ export function demoQuote(marketHashName: string): CsgoQuote {
     fetchedAt: new Date().toISOString(),
     orderBook: { asks: [], bids: [] },
     dataSource: "demo",
-    iconUrl: null,
+    iconUrl: csgoPicsumIconUrl(marketHashName),
   };
 }
 

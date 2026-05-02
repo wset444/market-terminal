@@ -71,3 +71,25 @@ export function addFavoriteCodeIfMissing(code: string): { codes: string[]; added
   writeFavoriteCodes(next);
   return { codes: next, added: true };
 }
+
+/**
+ * 步骤：
+ * 1. 读取当前收藏顺序（与表格行顺序一致）。
+ * 2. 任一索引越界或与 `fromIndex === toIndex` 时原样返回当前列表。
+ * 3. `splice` 取出 `fromIndex` 再插入 `toIndex`，写入 `localStorage` 并返回新数组。
+ *
+ * @param fromIndex - 被拖动行的原下标
+ * @param toIndex - 放置目标行的下标（整行作为插入位置）
+ */
+export function reorderFavoriteCodes(fromIndex: number, toIndex: number): string[] {
+  const cur = readFavoriteCodes();
+  if (fromIndex === toIndex) return cur;
+  if (fromIndex < 0 || toIndex < 0 || fromIndex >= cur.length || toIndex >= cur.length) {
+    return cur;
+  }
+  const next = [...cur];
+  const [item] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, item);
+  writeFavoriteCodes(next);
+  return next;
+}

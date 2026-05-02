@@ -19,6 +19,24 @@ export function formatTime24h(date: Date, dateLocale: string): string {
 }
 
 /**
+ * 步骤：
+ * 1. 使用 `Intl` 格式化为 **24 小时制、仅时分**（不显示秒）。
+ * 2. `dateLocale` 一般为 `appLocaleToDateLocale` 的返回值。
+ * 3. 用于顶栏「隐藏秒」偏好时的时钟展示。
+ *
+ * @param date - 当前时间
+ * @param dateLocale - BCP 47 区域标签
+ * @returns 如 `14:05`
+ */
+export function formatTimeHm(date: Date, dateLocale: string): string {
+  return date.toLocaleTimeString(dateLocale, {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
  * 1. 格式化为「月/日 + 星期缩写」一行文案（与顶栏日期区一致）。
  * 2. 依赖运行环境的 `Intl` 实现，不同浏览器缩写可能略有差异。
  * 3. `dateLocale` 一般为 `appLocaleToDateLocale` 的返回值。

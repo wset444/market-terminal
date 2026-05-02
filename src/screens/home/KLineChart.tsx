@@ -125,7 +125,8 @@ export default function KLineChart({
   const padLeft = 52;
   const padRight = 16;
   const padTop = 16;
-  const padBottom = 28;
+  /** 略增高，为 X 轴日期留出垂直空间 */
+  const padBottom = 32;
   const volHeight = 64;
   const chartH = height - padTop - padBottom - volHeight - 8;
   const n = bars.length;
@@ -167,7 +168,28 @@ export default function KLineChart({
   const hovered = hoveredIndex !== null && bars[hoveredIndex] ? bars[hoveredIndex] : null;
   const hi = hoveredIndex;
 
-  const labelStride = n > 0 ? Math.max(1, Math.floor(n / 8)) : 1;
+  /**
+   * X 轴日期刻度：相邻标签中心至少间隔 `minGapPx`，避免末尾「日 K」等场景下最后两根与上一刻度重叠。
+   * A 股与 CS2 共用本组件，故此处统一处理。
+   */
+  const xTickIndices = (() => {
+    const minGapPx = 46;
+    if (n <= 0 || W <= 0) return [] as number[];
+    if (n === 1) return [0];
+    const innerW = plotW - padLeft - padRight;
+    const approx = Math.max(2, Math.min(n, Math.floor(innerW / minGapPx)));
+    const stride = Math.max(1, Math.ceil((n - 1) / (approx - 1)));
+    const out: number[] = [];
+    for (let i = 0; i < n; i += stride) out.push(i);
+    const last = n - 1;
+    const lastPlaced = out[out.length - 1]!;
+    if (lastPlaced !== last) {
+      if (cx(last) - cx(lastPlaced) >= minGapPx) out.push(last);
+      else out[out.length - 1] = last;
+    }
+    return out;
+  })();
+  const xTickSet = new Set(xTickIndices);
 
   const fmtVol = (v: number) =>
     v >= 10000 ? `${(v / 10000).toFixed(1)}${t("kline.wan")}` : `${v.toFixed(0)}`;
@@ -355,7 +377,7 @@ export default function KLineChart({
           })}
 
           {bars.map((c, i) => {
-            if (i % labelStride !== 0 && i !== n - 1) return null;
+            if (!xTickSet.has(i)) return null;
             const short = c.date.length > 10 ? c.date.slice(5, 10) : c.date.slice(5);
             return (
               <text

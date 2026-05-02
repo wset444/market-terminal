@@ -7,11 +7,11 @@ import {
   MoonIcon,
   BellIcon,
   SearchIcon,
-  SettingsIcon,
   WifiIcon,
 } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { MarketBoardTabs } from "@/components/layout/MarketBoardTabs";
+import { TopBarSettingsMenu } from "@/components/layout/TopBarSettingsMenu";
 import { useI18n } from "@/contexts/LocaleContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { CsgoSuggestItem, CsgoTickerRow } from "@/types/csgo";
@@ -19,8 +19,15 @@ import type { IndexTickerItem, StockSuggestItem } from "@/types/stock";
 import {
   appLocaleToDateLocale,
   formatShortWeekdayDate,
+  formatTimeHm,
   formatTime24h,
 } from "@/utils/timeFormat";
+import {
+  readClockSecondsPref,
+  readTickerAnimatePref,
+  writeClockSecondsPref,
+  writeTickerAnimatePref,
+} from "@/utils/uiPrefs";
 
 type TopBarProps = {
   /** 联想选中 6 位 A 股代码后切换主图 */
@@ -55,14 +62,41 @@ export default function TopBar({
   const [suggestions, setSuggestions] = useState<StockSuggestItem[]>([]);
   const [csgoSuggestions, setCsgoSuggestions] = useState<CsgoSuggestItem[]>([]);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [tickerAnimate, setTickerAnimate] = useState(true);
+  const [clockShowSeconds, setClockShowSeconds] = useState(true);
   const searchWrapRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * 步骤：
+   * 1. 用 `setTimeout(0)` 在首帧后读取 `localStorage` 与点亮时钟，避免 SSR 与客户端偏好不一致。
+   * 2. 满足 `react-hooks/set-state-in-effect`：不在 effect 同步体内直接 `setState`。
+   */
   useEffect(() => {
-    setClockMounted(true);
-    setTime(new Date());
-    const t = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(t);
+    const boot = window.setTimeout(() => {
+      setTickerAnimate(readTickerAnimatePref());
+      setClockShowSeconds(readClockSecondsPref());
+      setClockMounted(true);
+      setTime(new Date());
+    }, 0);
+    return () => clearTimeout(boot);
   }, []);
+
+  /**
+   * 步骤：
+   * 1. 仅在 `clockMounted` 后启动定时器。
+   * 2. 显示秒时每秒刷新；仅到分时每分钟刷新。
+   * 3. 依赖变化时用 `setTimeout(0)` 刷新一次时间，避免 effect 同步 `setTime`。
+   */
+  useEffect(() => {
+    if (!clockMounted) return;
+    const flush = window.setTimeout(() => setTime(new Date()), 0);
+    const intervalMs = clockShowSeconds ? 1000 : 60_000;
+    const t = setInterval(() => setTime(new Date()), intervalMs);
+    return () => {
+      clearTimeout(flush);
+      clearInterval(t);
+    };
+  }, [clockShowSeconds, clockMounted]);
 
   useEffect(() => {
     let cancelled = false;
@@ -135,9 +169,12 @@ export default function TopBar({
   }, [pathname]);
 
   useEffect(() => {
-    setSearchQuery("");
-    setSuggestions([]);
-    setCsgoSuggestions([]);
+    const id = window.setTimeout(() => {
+      setSearchQuery("");
+      setSuggestions([]);
+      setCsgoSuggestions([]);
+    }, 0);
+    return () => clearTimeout(id);
   }, [pathname, searchVariant]);
 
   /**
@@ -146,9 +183,11 @@ export default function TopBar({
   useEffect(() => {
     const q = searchQuery.trim();
     if (q.length < 1) {
-      setSuggestions([]);
-      setCsgoSuggestions([]);
-      return;
+      const clearId = window.setTimeout(() => {
+        setSuggestions([]);
+        setCsgoSuggestions([]);
+      }, 0);
+      return () => clearTimeout(clearId);
     }
     const timer = window.setTimeout(() => {
       void (async () => {
@@ -188,7 +227,7 @@ export default function TopBar({
     return () => document.removeEventListener("mousedown", onDocDown);
   }, []);
 
-  const timeStr = formatTime24h(time, dateLocale);
+  const timeStr = clockShowSeconds ? formatTime24h(time, dateLocale) : formatTimeHm(time, dateLocale);
   const dateStr = formatShortWeekdayDate(time, dateLocale);
 
   const doubled = tickerItems.length > 0 ? [...tickerItems, ...tickerItems] : [];
@@ -318,7 +357,7 @@ export default function TopBar({
 
         <div className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
           <span className="font-medium text-foreground">
-            {clockMounted ? timeStr : "--:--:--"}
+            {clockMounted ? timeStr : clockShowSeconds ? "--:--:--" : "--:--"}
           </span>
           <span className="ml-1">{clockMounted ? dateStr : "--/-- --"}</span>
         </div>
@@ -341,9 +380,18 @@ export default function TopBar({
           </span>
         </button>
 
-        <button type="button" className="rounded p-1.5 transition-colors hover:bg-muted">
-          <SettingsIcon size={15} className="text-muted-foreground" />
-        </button>
+        <TopBarSettingsMenu
+          tickerAnimate={tickerAnimate}
+          onTickerAnimateChange={(next) => {
+            setTickerAnimate(next);
+            writeTickerAnimatePref(next);
+          }}
+          clockShowSeconds={clockShowSeconds}
+          onClockShowSecondsChange={(next) => {
+            setClockShowSeconds(next);
+            writeClockSecondsPref(next);
+          }}
+        />
       </div>
 
       <div className="relative flex h-7 items-center overflow-hidden border-t border-border bg-panel-header">
@@ -358,7 +406,7 @@ export default function TopBar({
               {pathname === ROUTES.csgo ? t("topBar.csgoTickerLoading") : t("topBar.indicesLoading")}
             </div>
           ) : (
-            <div className="ticker-animate flex w-max gap-8">
+            <div className={`flex w-max gap-8 ${tickerAnimate ? "ticker-animate" : ""}`}>
               {doubled.map((item, i) => (
                 <div key={`${item.label}-${item.price}-${i}`} className="flex shrink-0 items-center gap-1.5">
                   <span className="text-xs text-muted-foreground">{item.label}</span>
