@@ -9,9 +9,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { THEME_STORAGE_KEY } from "@/constants/themeStorage";
 
-/** `localStorage` 键：`'dark' | 'light'`，与 `html.dark` 一致 */
-export const THEME_STORAGE_KEY = "react-ai-theme";
+export { THEME_STORAGE_KEY };
 
 type ThemeContextValue = {
   /** `true` 为深色（根节点挂 `dark` 类） */
