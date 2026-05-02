@@ -5,7 +5,7 @@ type HomeProps = {
 };
 
 /**
- * 首页：股票看盘终端。URL `?code=` 为 6 位 A 股时切换主图（自选页「看盘」跳转用）。
+ * 首页：A 股看盘终端。URL `?code=` 为 6 位代码时指定主图标的。
  */
 export default async function Home({ searchParams }: HomeProps) {
   const sp = (await searchParams) ?? {};

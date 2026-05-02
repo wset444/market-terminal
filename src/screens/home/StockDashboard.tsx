@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import TopBar from "@/components/layout/TopBar";
 import PositionTable from "@/components/sections/PositionTable";
+import { ROUTES } from "@/constants/routes";
 import { useI18n } from "@/contexts/LocaleContext";
+import {
+  readFavoriteCodes,
+  STOCK_WATCHLIST_FAVORITES_KEY,
+  toggleFavoriteCode,
+} from "@/services/stock/watchlistFavorites";
+import { readMarkedCodes, STOCK_MARKED_KEY, toggleMarkedCode } from "@/services/stock/stockMarked";
 import { useStockQuote } from "@/hooks/useStockQuote";
 import StockHeader from "./StockHeader";
 import KLineChart from "./KLineChart";
@@ -28,7 +36,7 @@ const RIGHT_COL_TRADE_LIST_H = 305;
 const PERIOD_KLT = [1, 1, 5, 15, 30, 60, 101, 102, 103] as const;
 
 export type StockDashboardProps = {
-  /** 来自 `/?code=`，与自选页「看盘」联动 */
+  /** 来自 `/?code=`，URL 带 6 位代码时初始化主图标的 */
   initialStockCode?: string;
 };
 
@@ -37,10 +45,29 @@ export type StockDashboardProps = {
  */
 export function StockDashboard({ initialStockCode }: StockDashboardProps) {
   const { t } = useI18n();
+  const router = useRouter();
   const [activePeriod, setActivePeriod] = useState(6);
   const [stockCode, setStockCode] = useState(() =>
     initialStockCode && /^\d{6}$/.test(initialStockCode) ? initialStockCode : DEMO_STOCK_CODE,
   );
+  const [favoriteCodes, setFavoriteCodes] = useState<string[]>([]);
+  const [markedCodes, setMarkedCodes] = useState<string[]>([]);
+
+  /** 自选收藏与标记：首屏从 `localStorage` 读取；多标签页通过 `storage` 同步 */
+  useEffect(() => {
+    setFavoriteCodes(readFavoriteCodes());
+    setMarkedCodes(readMarkedCodes());
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STOCK_WATCHLIST_FAVORITES_KEY || e.key === null) {
+        setFavoriteCodes(readFavoriteCodes());
+      }
+      if (e.key === STOCK_MARKED_KEY || e.key === null) {
+        setMarkedCodes(readMarkedCodes());
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   /** URL `code` 变化时同步主图（不覆盖用户在当前页已选中的合法修改仅当 URL 带 code） */
   useEffect(() => {
@@ -48,10 +75,28 @@ export function StockDashboard({ initialStockCode }: StockDashboardProps) {
       setStockCode(initialStockCode);
     }
   }, [initialStockCode]);
-  const { quote, loading: quoteLoading, error: quoteError } = useStockQuote({
-    code: stockCode,
-    pollMs: 5000,
-  });
+
+  /**
+   * 1. 校验 6 位 A 股代码后更新 `stockCode`。
+   * 2. `router.replace` 同步 `?code=`，刷新页与分享链接与主图一致。
+   * 3. `scroll: false` 避免切股时页面跳动。
+   */
+  const selectStockFromWatchlist = (code: string) => {
+    if (!/^\d{6}$/.test(code)) return;
+    setStockCode(code);
+    router.replace(`${ROUTES.home}?code=${encodeURIComponent(code)}`, { scroll: false });
+  };
+
+  const toggleWatchlistFavorite = () => {
+    if (!/^\d{6}$/.test(stockCode)) return;
+    setFavoriteCodes(toggleFavoriteCode(stockCode));
+  };
+
+  const toggleMarked = () => {
+    if (!/^\d{6}$/.test(stockCode)) return;
+    setMarkedCodes(toggleMarkedCode(stockCode));
+  };
+  const { quote, loading: quoteLoading, error: quoteError } = useStockQuote({ code: stockCode });
 
   const livePrice = quote?.price ?? FALLBACK_PRICE;
   const klt = useMemo(
@@ -73,6 +118,13 @@ export function StockDashboard({ initialStockCode }: StockDashboardProps) {
         quote={quote}
         quoteLoading={quoteLoading}
         quoteError={quoteError}
+        activeStockCode={stockCode}
+        watchlistFavorited={favoriteCodes.includes(stockCode)}
+        onToggleWatchlistFavorite={toggleWatchlistFavorite}
+        favoriteCodes={favoriteCodes}
+        onFavoritesUpdated={setFavoriteCodes}
+        marked={markedCodes.includes(stockCode)}
+        onToggleMark={toggleMarked}
       />
 
       <div className="flex min-h-0 min-w-[1440px] flex-1 overflow-hidden">
@@ -85,12 +137,16 @@ export function StockDashboard({ initialStockCode }: StockDashboardProps) {
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="border-border bg-panel w-full min-w-0 shrink-0 border-b">
-            <KLineChart key={`${stockCode}-${klt}`} code={stockCode} klt={klt} height={380} />
+            <KLineChart code={stockCode} klt={klt} height={380} />
           </div>
 
           <div className="flex min-h-0 flex-1 overflow-hidden">
             <div className="border-border bg-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border-r">
-              <PositionTable />
+              <PositionTable
+                favoriteCodes={favoriteCodes}
+                onSelectCode={selectStockFromWatchlist}
+                selectedCode={stockCode}
+              />
             </div>
             <div
               className="bg-panel flex min-h-0 w-[260px] shrink-0 flex-col overflow-hidden"

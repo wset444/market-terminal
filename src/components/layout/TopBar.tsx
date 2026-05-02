@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   SunIcon,
@@ -12,37 +11,49 @@ import {
   WifiIcon,
 } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
+import { MarketBoardTabs } from "@/components/layout/MarketBoardTabs";
 import { useI18n } from "@/contexts/LocaleContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import type { CsgoSuggestItem, CsgoTickerRow } from "@/types/csgo";
 import type { IndexTickerItem, StockSuggestItem } from "@/types/stock";
-
-const TOP_NAV_DEF = [
-  { msg: "topNav.market", href: ROUTES.home },
-  { msg: "topNav.watchlist", href: ROUTES.watchlist },
-  { msg: "topNav.funds", href: ROUTES.funds },
-  { msg: "topNav.research", href: ROUTES.research },
-  { msg: "topNav.messages", href: ROUTES.messages },
-  { msg: "topNav.settings", href: ROUTES.settings },
-] as const;
+import {
+  appLocaleToDateLocale,
+  formatShortWeekdayDate,
+  formatTime24h,
+} from "@/utils/timeFormat";
 
 type TopBarProps = {
   /** 联想选中 6 位 A 股代码后切换主图 */
   onSelectStockCode?: (code: string) => void;
+  /** `csgo`：搜索走 `/api/csgo/suggest`，选中 `market_hash_name` */
+  searchVariant?: "stock" | "csgo";
+  onSelectCsgoItem?: (marketHashName: string) => void;
 };
 
 /**
- * 顶部导航 + 指数跑马灯（`/api/stock/indices`）+ 股票联想（`/api/stock/suggest`）。
+ * 顶部栏：品牌区、（行情页）A 股/CS2 模式切换、搜索、指数跑马灯等。
+ *
+ * 1. 主导航六个 Tab 已收敛移除，产品入口仅为 `/` 与 `/csgo`。
+ * 2. `MarketBoardTabs` 仅在上述两路由展示，与 `StockDashboard` / CS2 页一致。
+ * 3. `/` 跑马灯拉 A 股指数；`/csgo` 拉 `/api/csgo/ticker`（Steam + 演示兜底），左侧文案切换。
  */
-export default function TopBar({ onSelectStockCode = () => {} }: TopBarProps) {
+export default function TopBar({
+  onSelectStockCode = () => {},
+  searchVariant = "stock",
+  onSelectCsgoItem = () => {},
+}: TopBarProps) {
   const { isDark, toggleTheme } = useTheme();
   const { t, locale, setLocale } = useI18n();
-  const dateLocale = locale === "zh" ? "zh-CN" : "en-US";
+  const dateLocale = appLocaleToDateLocale(locale);
   const pathname = usePathname();
   const [clockMounted, setClockMounted] = useState(false);
   const [time, setTime] = useState(() => new Date());
-  const [indices, setIndices] = useState<IndexTickerItem[]>([]);
+  const [tickerItems, setTickerItems] = useState<
+    { label: string; price: string; changeStr: string; up: boolean }[]
+  >([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<StockSuggestItem[]>([]);
+  const [csgoSuggestions, setCsgoSuggestions] = useState<CsgoSuggestItem[]>([]);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const searchWrapRef = useRef<HTMLDivElement>(null);
 
@@ -55,49 +66,118 @@ export default function TopBar({ onSelectStockCode = () => {} }: TopBarProps) {
 
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
+
+    if (pathname === ROUTES.csgo) {
+      const loadCsgo = async () => {
+        try {
+          const res = await fetch(`/api/csgo/ticker`);
+          const j: unknown = await res.json();
+          const data = (j as { data?: CsgoTickerRow[] }).data;
+          if (cancelled) return;
+          if (!Array.isArray(data) || data.length === 0) {
+            setTickerItems([]);
+            return;
+          }
+          setTickerItems(
+            data.map((row) => {
+              const label = row.name.length > 28 ? `${row.name.slice(0, 28)}…` : row.name;
+              return {
+                label,
+                price: `$${row.priceUsd.toFixed(2)}`,
+                changeStr: `${row.changePct >= 0 ? "+" : ""}${row.changePct.toFixed(2)}%`,
+                up: row.changePct >= 0,
+              };
+            }),
+          );
+        } catch {
+          if (!cancelled) setTickerItems([]);
+        }
+      };
+      void loadCsgo();
+      const id = setInterval(loadCsgo, 15000);
+      return () => {
+        cancelled = true;
+        clearInterval(id);
+      };
+    }
+
+    const loadStock = async () => {
       try {
         const res = await fetch(`/api/stock/indices`);
         const j: unknown = await res.json();
         const data = (j as { data?: IndexTickerItem[] }).data;
-        if (!cancelled && Array.isArray(data)) setIndices(data);
+        if (cancelled) return;
+        if (!Array.isArray(data)) {
+          setTickerItems([]);
+          return;
+        }
+        setTickerItems(
+          data.map((x) => ({
+            label: x.name || x.code,
+            price:
+              x.price >= 1000
+                ? x.price.toLocaleString("zh-CN", { maximumFractionDigits: 2 })
+                : x.price.toFixed(2),
+            changeStr: `${x.changePct >= 0 ? "+" : ""}${x.changePct.toFixed(2)}%`,
+            up: x.changePct >= 0,
+          })),
+        );
       } catch {
-        /* ignore */
+        if (!cancelled) setTickerItems([]);
       }
     };
-    void load();
-    const t = setInterval(load, 10000);
+    void loadStock();
+    const t = setInterval(loadStock, 10000);
     return () => {
       cancelled = true;
       clearInterval(t);
     };
-  }, []);
+  }, [pathname]);
+
+  useEffect(() => {
+    setSearchQuery("");
+    setSuggestions([]);
+    setCsgoSuggestions([]);
+  }, [pathname, searchVariant]);
 
   /**
-   * 输入防抖后请求 `/api/stock/suggest`，空串清空下拉。
+   * 输入防抖后请求股票或 CS2 联想接口，空串清空下拉。
    */
   useEffect(() => {
     const q = searchQuery.trim();
     if (q.length < 1) {
       setSuggestions([]);
+      setCsgoSuggestions([]);
       return;
     }
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void (async () => {
         try {
-          const res = await fetch(
-            `/api/stock/suggest?q=${encodeURIComponent(q)}&count=8`,
-          );
-          const j: unknown = await res.json();
-          const data = (j as { data?: StockSuggestItem[] }).data;
-          setSuggestions(Array.isArray(data) ? data : []);
+          if (searchVariant === "csgo") {
+            const res = await fetch(
+              `/api/csgo/suggest?q=${encodeURIComponent(q)}&count=12`,
+            );
+            const j: unknown = await res.json();
+            const data = (j as { data?: CsgoSuggestItem[] }).data;
+            setCsgoSuggestions(Array.isArray(data) ? data : []);
+            setSuggestions([]);
+          } else {
+            const res = await fetch(
+              `/api/stock/suggest?q=${encodeURIComponent(q)}&count=8`,
+            );
+            const j: unknown = await res.json();
+            const data = (j as { data?: StockSuggestItem[] }).data;
+            setSuggestions(Array.isArray(data) ? data : []);
+            setCsgoSuggestions([]);
+          }
         } catch {
           setSuggestions([]);
+          setCsgoSuggestions([]);
         }
       })();
     }, 280);
-    return () => window.clearTimeout(t);
-  }, [searchQuery]);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery, searchVariant]);
 
   /** 点击搜索区域外关闭联想层。 */
   useEffect(() => {
@@ -108,22 +188,8 @@ export default function TopBar({ onSelectStockCode = () => {} }: TopBarProps) {
     return () => document.removeEventListener("mousedown", onDocDown);
   }, []);
 
-  const timeStr = time.toLocaleTimeString(dateLocale, { hour12: false });
-  const dateStr = time.toLocaleDateString(dateLocale, {
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "short",
-  });
-
-  const tickerItems = indices.map((x) => ({
-    label: x.name || x.code,
-    price:
-      x.price >= 1000
-        ? x.price.toLocaleString("zh-CN", { maximumFractionDigits: 2 })
-        : x.price.toFixed(2),
-    changeStr: `${x.changePct >= 0 ? "+" : ""}${x.changePct.toFixed(2)}%`,
-    up: x.changePct >= 0,
-  }));
+  const timeStr = formatTime24h(time, dateLocale);
+  const dateStr = formatShortWeekdayDate(time, dateLocale);
 
   const doubled = tickerItems.length > 0 ? [...tickerItems, ...tickerItems] : [];
 
@@ -137,24 +203,12 @@ export default function TopBar({ onSelectStockCode = () => {} }: TopBarProps) {
           <span className="text-sm font-bold tracking-wide text-foreground">{t("topBar.brandTitle")}</span>
         </div>
 
-        <nav className="flex items-center gap-1 text-xs" aria-label={t("topBar.mainNavAria")}>
-          {TOP_NAV_DEF.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded px-3 py-1.5 transition-colors ${
-                  active
-                    ? "bg-primary text-white"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                {t(item.msg)}
-              </Link>
-            );
-          })}
-        </nav>
+        {pathname === ROUTES.home || pathname === ROUTES.csgo ? (
+          <>
+            <div className="bg-border h-6 w-px shrink-0" aria-hidden />
+            <MarketBoardTabs variant="inline" />
+          </>
+        ) : null}
 
         <div className="flex-1" />
 
@@ -165,7 +219,11 @@ export default function TopBar({ onSelectStockCode = () => {} }: TopBarProps) {
               type="search"
               name="stock-suggest"
               autoComplete="off"
-              placeholder={t("topBar.searchPlaceholder")}
+              placeholder={
+                searchVariant === "csgo"
+                  ? t("topBar.searchPlaceholderCsgo")
+                  : t("topBar.searchPlaceholder")
+              }
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -178,30 +236,48 @@ export default function TopBar({ onSelectStockCode = () => {} }: TopBarProps) {
               className="text-foreground placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-xs outline-none"
             />
           </div>
-          {suggestOpen && suggestions.length > 0 ? (
-            <ul className="border-border bg-panel absolute right-0 z-50 mt-1 max-h-64 w-full overflow-y-auto rounded border shadow-md">
-              {suggestions.map((s) => (
-                <li key={s.code}>
-                  <button
-                    type="button"
-                    className="hover:bg-muted/50 flex w-full items-center gap-2 px-3 py-2 text-left text-xs"
-                    onClick={() => {
-                      onSelectStockCode(s.code);
-                      setSearchQuery("");
-                      setSuggestions([]);
-                      setSuggestOpen(false);
-                    }}
-                  >
-                    <span className="text-foreground min-w-0 flex-1 truncate">{s.name}</span>
-                    <span className="text-muted-foreground shrink-0 font-mono tabular-nums">
-                      {s.code}
-                    </span>
-                    <span className="text-muted-foreground/80 w-9 shrink-0 text-right text-[10px]">
-                      {s.marketLabel}
-                    </span>
-                  </button>
-                </li>
-              ))}
+          {suggestOpen &&
+          (searchVariant === "csgo" ? csgoSuggestions.length > 0 : suggestions.length > 0) ? (
+            <ul className="border-border bg-panel scrollbar-thin absolute right-0 z-50 mt-1 max-h-64 w-full overflow-y-auto rounded border shadow-md">
+              {searchVariant === "csgo"
+                ? csgoSuggestions.map((s) => (
+                    <li key={s.market_hash_name}>
+                      <button
+                        type="button"
+                        className="hover:bg-muted/50 flex w-full items-center gap-2 px-3 py-2 text-left text-xs"
+                        onClick={() => {
+                          onSelectCsgoItem(s.market_hash_name);
+                          setSearchQuery("");
+                          setCsgoSuggestions([]);
+                          setSuggestOpen(false);
+                        }}
+                      >
+                        <span className="text-foreground min-w-0 flex-1 truncate">{s.name}</span>
+                      </button>
+                    </li>
+                  ))
+                : suggestions.map((s) => (
+                    <li key={s.code}>
+                      <button
+                        type="button"
+                        className="hover:bg-muted/50 flex w-full items-center gap-2 px-3 py-2 text-left text-xs"
+                        onClick={() => {
+                          onSelectStockCode(s.code);
+                          setSearchQuery("");
+                          setSuggestions([]);
+                          setSuggestOpen(false);
+                        }}
+                      >
+                        <span className="text-foreground min-w-0 flex-1 truncate">{s.name}</span>
+                        <span className="text-muted-foreground shrink-0 font-mono tabular-nums">
+                          {s.code}
+                        </span>
+                        <span className="text-muted-foreground/80 w-9 shrink-0 text-right text-[10px]">
+                          {s.marketLabel}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
             </ul>
           ) : null}
         </div>
@@ -272,15 +348,19 @@ export default function TopBar({ onSelectStockCode = () => {} }: TopBarProps) {
 
       <div className="relative flex h-7 items-center overflow-hidden border-t border-border bg-panel-header">
         <div className="absolute left-0 top-0 z-10 flex h-full w-16 shrink-0 items-center justify-center border-r border-border bg-panel-header">
-          <span className="text-xs font-medium text-primary">{t("topBar.tickerBanner")}</span>
+          <span className="text-xs font-medium text-primary">
+            {pathname === ROUTES.csgo ? t("topBar.tickerBannerCsgo") : t("topBar.tickerBanner")}
+          </span>
         </div>
         <div className="ml-16 flex-1 overflow-hidden">
           {doubled.length === 0 ? (
-            <div className="text-muted-foreground px-2 text-xs">{t("topBar.indicesLoading")}</div>
+            <div className="text-muted-foreground px-2 text-xs">
+              {pathname === ROUTES.csgo ? t("topBar.csgoTickerLoading") : t("topBar.indicesLoading")}
+            </div>
           ) : (
             <div className="ticker-animate flex w-max gap-8">
               {doubled.map((item, i) => (
-                <div key={`${item.label}-${i}`} className="flex shrink-0 items-center gap-1.5">
+                <div key={`${item.label}-${item.price}-${i}`} className="flex shrink-0 items-center gap-1.5">
                   <span className="text-xs text-muted-foreground">{item.label}</span>
                   <span
                     className={`font-mono text-xs font-medium ${item.up ? "text-up" : "text-down"}`}

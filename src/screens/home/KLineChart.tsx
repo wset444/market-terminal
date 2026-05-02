@@ -11,6 +11,9 @@ const MA_COLORS = {
   ma60: "#06b6d4",
 };
 
+/** MA 指标条固定高度（px），与下方 `height` 相加为组件总占位高度，避免加载/有数据时布局跳动 */
+const MA_TOOLBAR_PX = 40;
+
 function calcMA(closes: number[], period: number): (number | null)[] {
   return closes.map((_, i) => {
     if (i < period - 1) return null;
@@ -21,28 +24,61 @@ function calcMA(closes: number[], period: number): (number | null)[] {
 
 type KLineChartProps = {
   code: string;
-  /** 东财 klt：1=1分 5=5分 … 101日 102周 103月 */
+  /** 东财 klt：1=1分 5=5分 … 101日 102周 103月（`source=steam` 时忽略） */
   klt: number;
   height?: number;
+  /** `steam`：`code` 视为 `market_hash_name`，走 `/api/csgo/kline` */
+  source?: "eastmoney" | "steam";
 };
 
 /**
  * K 线：拉取 `/api/stock/kline` 真实 OHLCV，在前端绘制 MA 与成交量柱。
  */
-export default function KLineChart({ code, klt, height = 380 }: KLineChartProps) {
+export default function KLineChart({
+  code,
+  klt,
+  height = 380,
+  source = "eastmoney",
+}: KLineChartProps) {
   const { t } = useI18n();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [bars, setBars] = useState<KlineBar[]>([]);
   const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [steamEmptyHint, setSteamEmptyHint] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setBars([]);
     setLoadErr(null);
+    setSteamEmptyHint(false);
     void (async () => {
       try {
+        if (source === "steam") {
+          const res = await fetch(
+            `/api/csgo/kline?market_hash_name=${encodeURIComponent(code)}`,
+          );
+          const j: unknown = await res.json();
+          if (!res.ok) {
+            setLoadErr(
+              typeof j === "object" && j && "error" in j
+                ? String((j as { error: string }).error)
+                : "__LOAD_FAILED__",
+            );
+            setBars([]);
+            return;
+          }
+          const data = (j as { data?: KlineBar[] }).data;
+          const arr = Array.isArray(data) ? data : [];
+          if (!cancelled) {
+            setBars(arr);
+            setSteamEmptyHint(arr.length === 0);
+          }
+          return;
+        }
+
         const res = await fetch(
           `/api/stock/kline?code=${encodeURIComponent(code)}&klt=${klt}&limit=180`,
         );
@@ -68,7 +104,7 @@ export default function KLineChart({ code, klt, height = 380 }: KLineChartProps)
     return () => {
       cancelled = true;
     };
-  }, [code, klt]);
+  }, [code, klt, source]);
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -84,7 +120,7 @@ export default function KLineChart({ code, klt, height = 380 }: KLineChartProps)
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [code, klt, bars.length]);
+  }, [code, klt]);
 
   const padLeft = 52;
   const padRight = 16;
@@ -143,26 +179,20 @@ export default function KLineChart({ code, klt, height = 380 }: KLineChartProps)
         ? t("kline.loadFailed")
         : loadErr;
 
-  if (loadErr && n === 0) {
-    return (
-      <div className="flex items-center justify-center text-sm text-destructive" style={{ height }}>
-        {t("kline.loadErr")}
-        {errText}
-      </div>
-    );
-  }
-
-  if (n === 0) {
-    return (
-      <div className="text-muted-foreground flex items-center justify-center text-sm" style={{ height }}>
-        {t("kline.loading")}
-      </div>
-    );
-  }
+  const showChart = !loadErr && n > 0;
+  const showErrOnly = Boolean(loadErr && n === 0);
+  const showLoadingOrEmpty = !loadErr && n === 0;
 
   return (
-    <div data-cmp="KLineChart" className="flex w-full min-w-0 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1.5 text-xs">
+    <div
+      data-cmp="KLineChart"
+      className="bg-panel flex w-full min-w-0 flex-col"
+      style={{ minHeight: height + MA_TOOLBAR_PX }}
+    >
+      <div
+        className="border-border flex h-10 shrink-0 flex-wrap items-center gap-3 border-b px-3 text-xs"
+        aria-hidden={!showChart}
+      >
         {(["MA5", "MA10", "MA20", "MA60"] as const).map((label, i) => {
           const colorKey = (["ma5", "ma10", "ma20", "ma60"] as const)[i];
           const series = [ma5, ma10, ma20, ma60][i];
@@ -204,12 +234,36 @@ export default function KLineChart({ code, klt, height = 380 }: KLineChartProps)
         )}
       </div>
 
-      <div ref={containerRef} className="relative w-full min-w-0" style={{ height }}>
-        {W <= 0 ? (
+      <div
+        ref={containerRef}
+        className="relative w-full min-w-0 shrink-0 overflow-hidden"
+        style={{ height }}
+      >
+        {showErrOnly ? (
+          <div className="text-destructive flex h-full w-full items-center justify-center px-4 text-center text-sm">
+            <span>
+              {t("kline.loadErr")}
+              {errText}
+            </span>
+          </div>
+        ) : null}
+
+        {showLoadingOrEmpty ? (
+          <div className="text-muted-foreground absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 text-center text-sm">
+            <span>{steamEmptyHint ? t("csgo.chartNoHistory") : t("kline.loading")}</span>
+            {steamEmptyHint ? (
+              <span className="text-muted-foreground/80 max-w-md text-xs">{t("csgo.chartNoHistoryHint")}</span>
+            ) : null}
+          </div>
+        ) : null}
+
+        {showChart && W <= 0 ? (
           <div className="bg-muted/10 text-muted-foreground flex h-full w-full items-center justify-center text-xs">
             {t("kline.init")}
           </div>
-        ) : (
+        ) : null}
+
+        {showChart && W > 0 ? (
         <svg
           ref={svgRef}
           width={W}
@@ -367,7 +421,7 @@ export default function KLineChart({ code, klt, height = 380 }: KLineChartProps)
             </g>
           )}
         </svg>
-        )}
+        ) : null}
       </div>
     </div>
   );

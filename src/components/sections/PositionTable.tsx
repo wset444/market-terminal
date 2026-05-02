@@ -17,23 +17,49 @@ type WatchlistPositionRow = {
 
 type PositionTableProps = {
   /**
+   * 已收藏的 6 位代码（来自 `localStorage`，仅这些会请求批价并展示）。
+   */
+  favoriteCodes: string[];
+  /**
    * 若设为 `/`，在操作列增加「看盘」链到 `/?code=`（用于自选独立页）。
    * 行情页内嵌不传，避免重复入口。
    */
   quoteLinkBase?: string;
+  /**
+   * 1. 点击数据行（非操作列内按钮）时回调 6 位 `code`。
+   * 2. 由 `StockDashboard` 传入以切换主图、盘口等。
+   * 3. 未传时行仍可 hover，但不切换主图。
+   */
+  onSelectCode?: (code: string) => void;
+  /** 当前主图标的，用于行背景高亮 */
+  selectedCode?: string;
 };
 
 /**
- * 自选持仓：现价与昨收为接口真实数据；股数与成本价来自 `watchlist-config.ts`。
+ * 自选持仓：仅展示 `favoriteCodes` 中的标的；现价来自接口，股数/成本优先 `watchlist-config` 命中项否则默认演示值。
  */
-export default function PositionTable({ quoteLinkBase }: PositionTableProps = {}) {
+export default function PositionTable({
+  favoriteCodes,
+  quoteLinkBase,
+  onSelectCode,
+  selectedCode,
+}: PositionTableProps) {
   const { t } = useI18n();
   const [rows, setRows] = useState<WatchlistPositionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const codesKey = favoriteCodes.join(",");
+
   const load = async () => {
+    if (favoriteCodes.length === 0) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     try {
-      const res = await fetch(`/api/stock/watchlist`);
+      const q = encodeURIComponent(favoriteCodes.join(","));
+      const res = await fetch(`/api/stock/watchlist?codes=${q}`);
       const j: unknown = await res.json();
       const data = (j as { data?: WatchlistPositionRow[] }).data;
       if (Array.isArray(data)) setRows(data);
@@ -46,9 +72,9 @@ export default function PositionTable({ quoteLinkBase }: PositionTableProps = {}
 
   useEffect(() => {
     void load();
-    const id = setInterval(load, 6000);
+    const id = setInterval(load, 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [codesKey]);
 
   const totalCost = rows.reduce((s, p) => s + p.avgCost * p.shares, 0);
   const totalValue = rows.reduce((s, p) => s + p.price * p.shares, 0);
@@ -109,7 +135,11 @@ export default function PositionTable({ quoteLinkBase }: PositionTableProps = {}
       </div>
 
       <div className="scrollbar-thin flex-1 overflow-auto">
-        {loading && rows.length === 0 ? (
+        {!loading && favoriteCodes.length === 0 ? (
+          <div className="text-muted-foreground px-4 py-3 text-xs leading-relaxed">
+            {t("positionTable.emptyFavorites")}
+          </div>
+        ) : loading && rows.length === 0 ? (
           <div className="text-muted-foreground px-4 py-3 text-xs">{t("positionTable.loading")}</div>
         ) : (
           rows.map((p) => {
@@ -120,7 +150,19 @@ export default function PositionTable({ quoteLinkBase }: PositionTableProps = {}
             return (
               <div
                 key={p.code}
-                className="flex cursor-pointer items-center border-b border-border/50 px-4 py-2 transition-colors hover:bg-muted/30"
+                role={onSelectCode ? "button" : undefined}
+                tabIndex={onSelectCode ? 0 : undefined}
+                onClick={() => onSelectCode?.(p.code)}
+                onKeyDown={(e) => {
+                  if (!onSelectCode) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectCode(p.code);
+                  }
+                }}
+                className={`flex cursor-pointer items-center border-b border-border/50 px-4 py-2 transition-colors hover:bg-muted/30 ${
+                  selectedCode === p.code ? "bg-primary/10" : ""
+                }`}
               >
                 <div className="w-28">
                   <div className="text-xs font-medium text-foreground">{p.name}</div>
@@ -159,7 +201,7 @@ export default function PositionTable({ quoteLinkBase }: PositionTableProps = {}
                   {p.changePct >= 0 ? "+" : ""}
                   {p.changePct.toFixed(2)}%
                 </span>
-                <div className="flex flex-1 items-center justify-end gap-1">
+                <div className="flex flex-1 items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                   {quoteLinkBase ? (
                     <Link
                       href={`${quoteLinkBase}?code=${encodeURIComponent(p.code)}`}

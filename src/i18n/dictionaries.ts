@@ -3,9 +3,9 @@ export type AppLocale = "en" | "zh";
 
 export const LOCALE_STORAGE_KEY = "react-ai-locale";
 
-/** 嵌套字典：用点号路径访问，如 `topNav.market` */
+/** 嵌套字典：用点号路径访问，如 `boardMode.stocks` */
 export type MessageDict = {
-  topNav: Record<string, string>;
+  boardMode: Record<string, string>;
   topBar: Record<string, string>;
   units: Record<string, string>;
   board: Record<string, string>;
@@ -20,32 +20,25 @@ export type MessageDict = {
   news: Record<string, string>;
   positionTable: Record<string, string>;
   footer: Record<string, string>;
-  watchlist: Record<string, string>;
-  placeholder: {
-    funds: Record<string, string>;
-    research: Record<string, string>;
-    messages: Record<string, string>;
-    settings: Record<string, string>;
-  };
+  csgo: Record<string, string>;
 };
 
 export const en: MessageDict = {
-  topNav: {
-    market: "Market",
-    watchlist: "Watchlist",
-    funds: "Funds",
-    research: "Research",
-    messages: "Messages",
-    settings: "Settings",
+  boardMode: {
+    stocks: "A-shares",
+    csgo: "CS2 skins",
+    aria: "Board mode",
   },
   topBar: {
     brandMark: "T",
     brandTitle: "Terminal",
-    mainNavAria: "Main navigation",
     searchPlaceholder: "Search name / code",
+    searchPlaceholderCsgo: "Search CS2 item (Steam)",
     live: "Live",
     tickerBanner: "Ticker",
+    tickerBannerCsgo: "CS2 ticker",
     indicesLoading: "Loading indices…",
+    csgoTickerLoading: "Loading CS2 listings…",
     langZh: "中文",
     langEn: "EN",
     langAria: "Switch language",
@@ -82,6 +75,25 @@ export const en: MessageDict = {
     share: "Share",
     bookmark: "Mark",
     addWatchlist: "Add",
+    favoriteAdd: "Add to watchlist",
+    favoriteRemove: "Remove from watchlist",
+    compareDialogTitle: "Compare",
+    compareCodePlaceholder: "6-digit code",
+    compareRun: "Load",
+    compareLoading: "Loading…",
+    compareNoData: "No data",
+    compareErr: "Could not load quote",
+    comparePickHint: "From watchlist:",
+    compareMain: "Main",
+    compareOther: "Compare",
+    shareCopied: "Link copied",
+    shareFailed: "Copy failed",
+    shareNativeTitle: "Quote",
+    markedOn: "Marked",
+    markedOff: "Mark removed",
+    watchlistAdded: "Added to watchlist",
+    watchlistAlready: "Already in watchlist",
+    close: "Close",
   },
   stockHeaderPeriods: [
     "Intraday",
@@ -181,60 +193,81 @@ export const en: MessageDict = {
     openChart: "Chart",
     buy: "Buy",
     sell: "Sell",
+    emptyFavorites:
+      "No saved positions. Click the star next to the symbol name above to save; they appear here with local browser storage.",
   },
   footer: {
     demo: "Demo terminal",
   },
-  watchlist: {
-    title: "Watchlist",
-    desc: "Shares & cost are local (demo); prices from East Money. “Chart” opens the main terminal.",
-    configHint: "Config: services/stock/watchlist-config.ts",
-  },
-  placeholder: {
-    funds: {
-      title: "Funds",
-      description: "Northbound, main force, margin (placeholder).",
-      hint: "Extend `/api/stock/fflow` for multi-symbol dashboards and sector flows.",
-      footer: "Funds: under construction",
-    },
-    research: {
-      title: "Research",
-      description: "Filings, research notes, comps (placeholder).",
-      hint: "Wire news/research APIs or static lists; link symbols to the main chart.",
-      footer: "Research: under construction",
-    },
-    messages: {
-      title: "Messages",
-      description: "Alerts, watchlist moves, pushes (placeholder).",
-      hint: "WebSocket/polling or reuse news API; no backend persistence yet.",
-      footer: "Messages: under construction",
-    },
-    settings: {
-      title: "Settings",
-      description: "Theme, refresh, disclaimer (placeholder).",
-      hint: "Theme is in the top bar; add poll intervals, import/export watchlist, etc.",
-      footer: "Settings: under construction",
-    },
+  csgo: {
+    headerTag: "CS2 · Steam",
+    lowest: "Lowest list",
+    median: "Median",
+    volume24h: "24h sales",
+    dailySteam: "Daily (Steam history)",
+    dataSource:
+      "Source: Steam priceoverview + market search JSON (`icon_url` → CDN image). Demo only.",
+    chartNoHistory: "No price history returned",
+    chartNoHistoryHint:
+      "Steam often requires a logged-in session for `pricehistory`. Overview (header) may still work.",
+    listingsTitle: "Listing overview",
+    listingsSub: "From priceoverview",
+    ticksTitle: "Sales feed",
+    ticksSub: "Not wired (Steam does not expose tick stream here)",
+    popularTitle: "Popular on Steam",
+    popularSub: "CS2 market · search popular",
+    popularEmpty: "No popular list (check network / API).",
+    selectItemHint: "Search an item above or click a row on the right",
+    footerApi: "CS2: Steam Community Market (proxy)",
+    mainItem: "Item",
+    demoDataBanner:
+      "Demo prices & chart: Steam is unreachable from this network. Set CSGO_DISABLE_DEMO=1 to hide fallback.",
+    watchlistTitle: "Skin book",
+    watchlistTotalValue: "Est. value",
+    watchlistTotalPnl: "P&L $",
+    watchlistReturnPct: "Return",
+    watchlistConfigHint: "Config: services/csgo/watchlist-config.ts",
+    watchlistRefresh: "Refresh",
+    watchlistColName: "Item",
+    watchlistColQty: "Qty",
+    watchlistColCost: "Cost $",
+    watchlistColLast: "Last $",
+    watchlistColPnl: "P&L $",
+    watchlistColPnlPct: "P&L %",
+    watchlistColValue: "Value $",
+    watchlistColRefChg: "Low vs med %",
+    watchlistColAction: "Chart",
+    watchlistLoading: "Loading watchlist…",
+    watchlistOpenChart: "Chart",
+    feedTitle: "Steam & CS2",
+    feedHint: "Official links only — not a live news wire.",
+    feedMarketTitle: "Browse CS2 listings on the Steam Community Market",
+    feedMarketHost: "steamcommunity.com",
+    feedStatusTitle: "Steam platform stats & status",
+    feedStatusHost: "store.steampowered.com",
+    feedNewsTitle: "Counter-Strike 2 announcements",
+    feedNewsHost: "counter-strike.net",
+    feedWorkshopTitle: "CS2 Steam Workshop",
+    feedWorkshopHost: "steamcommunity.com",
   },
 };
 
 export const zh: MessageDict = {
-  topNav: {
-    market: "行情",
-    watchlist: "自选",
-    funds: "资金",
-    research: "研究",
-    messages: "消息",
-    settings: "设置",
+  boardMode: {
+    stocks: "A股行情",
+    csgo: "CS2 饰品",
+    aria: "看板类型",
   },
   topBar: {
     brandMark: "看",
     brandTitle: "看盘终端",
-    mainNavAria: "主导航",
     searchPlaceholder: "搜索股票/代码",
+    searchPlaceholderCsgo: "搜索 CS2 饰品（Steam）",
     live: "实时",
     tickerBanner: "行情播报",
+    tickerBannerCsgo: "饰品播报",
     indicesLoading: "指数行情加载中…",
+    csgoTickerLoading: "饰品行情加载中…",
     langZh: "中文",
     langEn: "EN",
     langAria: "切换语言",
@@ -271,6 +304,25 @@ export const zh: MessageDict = {
     share: "分享",
     bookmark: "标记",
     addWatchlist: "加自选",
+    favoriteAdd: "加入自选持仓",
+    favoriteRemove: "从自选持仓移除",
+    compareDialogTitle: "对比",
+    compareCodePlaceholder: "输入 6 位代码",
+    compareRun: "加载行情",
+    compareLoading: "加载中…",
+    compareNoData: "暂无数据",
+    compareErr: "无法获取该代码行情",
+    comparePickHint: "从自选快速点选：",
+    compareMain: "当前",
+    compareOther: "对比",
+    shareCopied: "链接已复制到剪贴板",
+    shareFailed: "复制失败",
+    shareNativeTitle: "看盘链接",
+    markedOn: "已标记",
+    markedOff: "已取消标记",
+    watchlistAdded: "已加入自选持仓",
+    watchlistAlready: "已在自选持仓中",
+    close: "关闭",
   },
   stockHeaderPeriods: [
     "分时",
@@ -369,40 +421,62 @@ export const zh: MessageDict = {
     openChart: "看盘",
     buy: "买入",
     sell: "卖出",
+    emptyFavorites:
+      "暂无自选。点击上方股票名称旁的星标即可收藏；列表保存在本机浏览器（localStorage），仅收藏的标的会显示在此处。",
   },
   footer: {
     demo: "演示终端",
   },
-  watchlist: {
-    title: "自选列表",
-    desc: "持仓股数与成本为本地配置（演示）；现价与涨跌为东财接口。点击「看盘」进入行情页主图。",
-    configHint: "配置：services/stock/watchlist-config.ts",
-  },
-  placeholder: {
-    funds: {
-      title: "资金",
-      description: "资金流向、北向资金、融资融券等模块（演示占位）。",
-      hint: "可与现有 `/api/stock/fflow` 扩展为多标的资金总览、板块净流入排行等。",
-      footer: "资金模块：建设中",
-    },
-    research: {
-      title: "研究",
-      description: "公告、研报、财务与可比公司（演示占位）。",
-      hint: "后续可对接资讯/研报 API 或静态摘要列表，与行情主图通过 code 联动。",
-      footer: "研究模块：建设中",
-    },
-    messages: {
-      title: "消息",
-      description: "价格预警、自选异动、快讯推送（演示占位）。",
-      hint: "可订阅 WebSocket/轮询或复用快讯接口做消息中心；当前无后端持久化。",
-      footer: "消息模块：建设中",
-    },
-    settings: {
-      title: "设置",
-      description: "界面主题、行情刷新、免责声明与关于（演示占位）。",
-      hint: "深浅色已在顶栏切换；此处可扩展轮询间隔、自选导入导出等本地偏好。",
-      footer: "设置模块：建设中",
-    },
+  csgo: {
+    headerTag: "CS2 · Steam",
+    lowest: "最低在售",
+    median: "中位价",
+    volume24h: "24h 成交笔数",
+    dailySteam: "日线（Steam 历史）",
+    dataSource:
+      "数据：Steam 挂牌价 + 市场搜索 JSON（饰品图 `icon_url` 走 CDN）。演示非投资建议。",
+    chartNoHistory: "暂无 K 线历史数据",
+    chartNoHistoryHint:
+      "Steam 的 `pricehistory` 常需登录 Cookie 才返回序列；头部现价仍可能可用。",
+    listingsTitle: "挂牌概览",
+    listingsSub: "来自 priceoverview",
+    ticksTitle: "分时成交",
+    ticksSub: "未接入（Steam 无公开逐笔流）",
+    popularTitle: "Steam 热门",
+    popularSub: "CS2 市场 · popular 排序",
+    popularEmpty: "暂无热门列表（请检查网络或接口）。",
+    selectItemHint: "在上方搜索饰品，或点击右侧列表",
+    footerApi: "CS2：Steam 社区市场（本机代理）",
+    mainItem: "主标的",
+    demoDataBanner:
+      "当前为演示价与演示 K 线：本网络无法访问 Steam 社区市场。需要仅真实数据可设环境变量 CSGO_DISABLE_DEMO=1。",
+    watchlistTitle: "饰品持仓",
+    watchlistTotalValue: "估值",
+    watchlistTotalPnl: "盈亏 $",
+    watchlistReturnPct: "收益率",
+    watchlistConfigHint: "配置：services/csgo/watchlist-config.ts",
+    watchlistRefresh: "刷新",
+    watchlistColName: "饰品",
+    watchlistColQty: "件数",
+    watchlistColCost: "成本$",
+    watchlistColLast: "现价$",
+    watchlistColPnl: "盈亏$",
+    watchlistColPnlPct: "盈亏%",
+    watchlistColValue: "市值$",
+    watchlistColRefChg: "低/中位%",
+    watchlistColAction: "主图",
+    watchlistLoading: "加载持仓…",
+    watchlistOpenChart: "主图",
+    feedTitle: "Steam 与 CS2",
+    feedHint: "官方入口链接，非实时资讯流。",
+    feedMarketTitle: "Steam 社区市场 · 浏览 CS2 挂牌",
+    feedMarketHost: "steamcommunity.com",
+    feedStatusTitle: "Steam 平台统计与状态",
+    feedStatusHost: "store.steampowered.com",
+    feedNewsTitle: "Counter-Strike 2 公告",
+    feedNewsHost: "counter-strike.net",
+    feedWorkshopTitle: "CS2 Steam 创意工坊",
+    feedWorkshopHost: "steamcommunity.com",
   },
 };
 

@@ -21,12 +21,12 @@ type UseStockQuoteResult = {
  *
  * 步骤：
  * 1. `fetch` 本地 API，避免把第三方地址暴露给浏览器并统一错误格式。
- * 2. `pollMs > 0` 时用 `setInterval` 定时刷新。
+ * 2. `pollMs > 0` 时用 `setInterval` 定时刷新（默认约 **1 分钟**，减轻接口压力）。
  * 3. 返回 `refresh` 供手动触发。
  */
 export function useStockQuote({
   code,
-  pollMs = 5000,
+  pollMs = 60_000,
 }: UseStockQuoteOptions): UseStockQuoteResult {
   const [quote, setQuote] = useState<StockQuote | null>(null);
   const [loading, setLoading] = useState(true);

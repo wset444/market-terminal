@@ -3,9 +3,6 @@
  */
 export const ROUTES = {
   home: "/",
-  watchlist: "/watchlist",
-  funds: "/funds",
-  research: "/research",
-  messages: "/messages",
-  settings: "/settings",
+  /** CS2 饰品看板（Steam 数据） */
+  csgo: "/csgo",
 } as const;
