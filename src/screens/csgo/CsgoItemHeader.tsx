@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StarIcon, BarChart2Icon, Share2Icon, BookmarkIcon, PlusIcon } from "lucide-react";
+import { StarIcon, Share2Icon } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { useI18n } from "@/contexts/LocaleContext";
-import { addCsgoFavoriteIfMissing } from "@/services/csgo/csgoFavorites";
 import type { CsgoQuote } from "@/types/csgo";
 import { shareNativeOrClipboard } from "@/utils/shareNativeOrClipboard";
 import { CsgoItemIcon } from "./CsgoItemIcon";
@@ -18,12 +17,12 @@ type CsgoItemHeaderProps = {
   watchlistFavorited: boolean;
   /** 星标：加入 / 移出自选 */
   onToggleWatchlistFavorite: () => void;
-  /** 「加自选」成功后回传最新列表（与 A 股 `StockHeader` 一致） */
+  /** 「加自选」成功后回传最新列表（与 A 股 `StockHeader` 一致）；加自选按钮暂隐藏时仍由父级传入 */
   onFavoritesUpdated: (hashes: string[]) => void;
 };
 
 /**
- * CS2 饰品标题区：字号与排布对齐 **A 股 `StockHeader`**；星标切换自选，`+ 加自选` 仅追加不重复项。
+ * CS2 饰品标题区：字号与排布对齐 **A 股 `StockHeader`**；星标切换自选。右侧操作暂仅保留「分享」。
  */
 export default function CsgoItemHeader({
   marketHashName,
@@ -32,7 +31,7 @@ export default function CsgoItemHeader({
   quoteError = null,
   watchlistFavorited,
   onToggleWatchlistFavorite,
-  onFavoritesUpdated,
+  onFavoritesUpdated: _onFavoritesUpdated,
 }: CsgoItemHeaderProps) {
   const { t } = useI18n();
   const dash = "—";
@@ -67,13 +66,6 @@ export default function CsgoItemHeader({
     if (r === "failed") flashTip(t("stockHeader.shareFailed"));
     else flashTip(t("stockHeader.shareCopied"));
   }, [flashTip, marketHashName, t]);
-
-  const onAddWatchlist = useCallback(() => {
-    if (!canFavorite) return;
-    const { hashes, added } = addCsgoFavoriteIfMissing(marketHashName);
-    onFavoritesUpdated(hashes);
-    flashTip(added ? t("stockHeader.watchlistAdded") : t("stockHeader.watchlistAlready"));
-  }, [canFavorite, flashTip, marketHashName, onFavoritesUpdated, t]);
 
   return (
     <div data-cmp="CsgoItemHeader" className="relative border-b border-border bg-panel px-4 py-2.5">
@@ -165,6 +157,7 @@ export default function CsgoItemHeader({
         <div className="flex-1" />
 
         <div className="flex shrink-0 flex-nowrap items-center gap-1">
+          {/*
           <button
             type="button"
             disabled={!canFavorite}
@@ -174,6 +167,7 @@ export default function CsgoItemHeader({
             <BarChart2Icon size={12} />
             <span>{t("stockHeader.compare")}</span>
           </button>
+          */}
           <button
             type="button"
             disabled={!canFavorite}
@@ -184,6 +178,7 @@ export default function CsgoItemHeader({
             <Share2Icon size={12} />
             <span>{t("stockHeader.share")}</span>
           </button>
+          {/*
           <button
             type="button"
             disabled={!canFavorite}
@@ -203,6 +198,7 @@ export default function CsgoItemHeader({
             <PlusIcon size={12} />
             <span>{t("stockHeader.addWatchlist")}</span>
           </button>
+          */}
         </div>
       </div>
     </div>

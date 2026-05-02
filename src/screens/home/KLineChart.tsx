@@ -15,6 +15,20 @@ const MA_COLORS = {
 /** MA 指标条固定高度（px），与下方 `height` 相加为组件总占位高度，避免加载/有数据时布局跳动 */
 const MA_TOOLBAR_PX = 40;
 
+/**
+ * 主图下沿与成交量带之间的留白（px）。
+ * 1. 与 `chartH` 计算中的扣减一致，保证总高度不变。
+ * 2. 略宽于旧版 8px，减轻左侧最低价数字与成交量区域视觉挤在一起的问题。
+ */
+const VOL_GAP = 12;
+
+/**
+ * 成交量带内部的顶部留白（px）。
+ * 1. 成交量纵轴从该留白之下开始映射，柱顶不再顶满到主图分隔线。
+ * 2. 为左上角「量」等标签留出垂直空间，避免贴边。
+ */
+const VOL_INNER_TOP = 8;
+
 function calcMA(closes: number[], period: number): (number | null)[] {
   return closes.map((_, i) => {
     if (i < period - 1) return null;
@@ -130,7 +144,9 @@ export default function KLineChart({
   /** 略增高，为 X 轴日期留出垂直空间 */
   const padBottom = 32;
   const volHeight = 64;
-  const chartH = height - padTop - padBottom - volHeight - 8;
+  const chartH = height - padTop - padBottom - volHeight - VOL_GAP;
+  const volBandTop = padTop + chartH + VOL_GAP;
+  const volDrawH = volHeight - VOL_INNER_TOP;
   const n = bars.length;
   const W = containerWidth > 8 ? containerWidth : 0;
 
@@ -145,7 +161,8 @@ export default function KLineChart({
   const maxV = n ? Math.max(...bars.map((c) => c.volume), 1) : 1;
 
   const scaleY = (v: number) => padTop + (1 - (v - minP) / (maxP - minP || 1)) * chartH;
-  const scaleVY = (v: number) => padTop + chartH + 8 + (1 - v / maxV) * volHeight;
+  const scaleVY = (v: number) =>
+    volBandTop + VOL_INNER_TOP + (1 - v / maxV) * volDrawH;
 
   const plotW = W > 0 ? W : 1;
   const step = n > 0 ? (plotW - padLeft - padRight) / n : 1;
@@ -370,7 +387,7 @@ export default function KLineChart({
                   x={x - candleW / 2}
                   y={scaleVY(c.volume)}
                   width={candleW}
-                  height={padTop + chartH + 8 + volHeight - scaleVY(c.volume)}
+                  height={volBandTop + volHeight - scaleVY(c.volume)}
                   fill={color}
                   opacity={0.5}
                 />
@@ -385,7 +402,7 @@ export default function KLineChart({
               <text
                 key={`lbl-${i}`}
                 x={cx(i)}
-                y={padTop + chartH + 8 + volHeight + 14}
+                y={volBandTop + volHeight + 14}
                 textAnchor="middle"
                 fontSize={10}
                 fill="var(--muted-foreground)"
@@ -397,7 +414,7 @@ export default function KLineChart({
 
           <text
             x={padLeft - 4}
-            y={padTop + chartH + 12}
+            y={volBandTop + VOL_INNER_TOP + 4}
             textAnchor="end"
             fontSize={9}
             fill="var(--muted-foreground)"
@@ -411,7 +428,7 @@ export default function KLineChart({
                 x1={cx(hoveredIndex)}
                 x2={cx(hoveredIndex)}
                 y1={padTop}
-                y2={padTop + chartH + 8 + volHeight}
+                y2={volBandTop + volHeight}
                 stroke="var(--muted-foreground)"
                 strokeWidth={0.8}
                 strokeDasharray="3,2"
