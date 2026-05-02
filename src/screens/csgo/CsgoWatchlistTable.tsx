@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GripVertical, RefreshCwIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import { GripVertical, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import { useGlobalRefresh } from "@/contexts/GlobalRefreshContext";
 import { useI18n } from "@/contexts/LocaleContext";
 import {
   mergeOrderWithConfig,
@@ -23,6 +24,7 @@ type CsgoWatchlistTableProps = {
  */
 export default function CsgoWatchlistTable({ onSelectItem, activeHash }: CsgoWatchlistTableProps) {
   const { t } = useI18n();
+  const { generation } = useGlobalRefresh();
   const [rows, setRows] = useState<CsgoWatchlistApiRow[]>([]);
   const [orderKeys, setOrderKeys] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,7 @@ export default function CsgoWatchlistTable({ onSelectItem, activeHash }: CsgoWat
       clearTimeout(boot);
       clearInterval(id);
     };
-  }, []);
+  }, [generation]);
 
   const totalCost = rows.reduce((s, p) => s + p.avgCost * p.qty, 0);
   const totalValue = rows.reduce((s, p) => s + p.price * p.qty, 0);
@@ -94,22 +96,12 @@ export default function CsgoWatchlistTable({ onSelectItem, activeHash }: CsgoWat
           </div>
         </div>
         <div className="min-w-0 flex-1" />
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <span
-            className="text-muted-foreground hidden max-w-[min(20rem,42vw)] truncate text-xs lg:inline"
-            title={t("csgo.watchlistConfigHint")}
-          >
-            {t("csgo.watchlistConfigHint")}
-          </span>
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="text-muted-foreground hover:text-foreground flex shrink-0 items-center gap-1 text-xs transition-colors"
-          >
-            <RefreshCwIcon size={11} />
-            <span>{t("csgo.watchlistRefresh")}</span>
-          </button>
-        </div>
+        <span
+          className="text-muted-foreground hidden max-w-[min(20rem,42vw)] shrink-0 truncate text-xs lg:inline"
+          title={t("csgo.watchlistConfigHint")}
+        >
+          {t("csgo.watchlistConfigHint")}
+        </span>
       </div>
 
       <div className="flex items-center border-b border-border bg-muted/30 px-4 py-1.5 text-xs text-muted-foreground">

@@ -8,10 +8,14 @@ import {
   BellIcon,
   SearchIcon,
   WifiIcon,
+  Maximize2Icon,
+  Minimize2Icon,
+  RefreshCwIcon,
 } from "lucide-react";
 import { ROUTES } from "@/constants/routes";
 import { MarketBoardTabs } from "@/components/layout/MarketBoardTabs";
 import { TopBarSettingsMenu } from "@/components/layout/TopBarSettingsMenu";
+import { useGlobalRefresh } from "@/contexts/GlobalRefreshContext";
 import { useI18n } from "@/contexts/LocaleContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { CsgoSuggestItem, CsgoTickerRow } from "@/types/csgo";
@@ -49,6 +53,7 @@ export default function TopBar({
   searchVariant = "stock",
   onSelectCsgoItem = () => {},
 }: TopBarProps) {
+  const { bump: bumpGlobalRefresh, generation: globalRefreshGeneration } = useGlobalRefresh();
   const { isDark, toggleTheme } = useTheme();
   const { t, locale, setLocale } = useI18n();
   const dateLocale = appLocaleToDateLocale(locale);
@@ -64,6 +69,7 @@ export default function TopBar({
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [tickerAnimate, setTickerAnimate] = useState(true);
   const [clockShowSeconds, setClockShowSeconds] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const searchWrapRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -166,7 +172,7 @@ export default function TopBar({
       cancelled = true;
       clearInterval(t);
     };
-  }, [pathname]);
+  }, [pathname, globalRefreshGeneration]);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -227,10 +233,55 @@ export default function TopBar({
     return () => document.removeEventListener("mousedown", onDocDown);
   }, []);
 
+  /**
+   * 步骤：
+   * 1. 监听 `fullscreenchange`，同步 `isFullscreen`（标准与部分 WebKit）。
+   * 2. 卸载时移除监听。
+   */
+  useEffect(() => {
+    const sync = () => {
+      const doc = document as Document & {
+        webkitFullscreenElement?: Element | null;
+      };
+      setIsFullscreen(Boolean(document.fullscreenElement ?? doc.webkitFullscreenElement));
+    };
+    sync();
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync as EventListener);
+    return () => {
+      document.removeEventListener("fullscreenchange", sync);
+      document.removeEventListener("webkitfullscreenchange", sync as EventListener);
+    };
+  }, []);
+
   const timeStr = clockShowSeconds ? formatTime24h(time, dateLocale) : formatTimeHm(time, dateLocale);
   const dateStr = formatShortWeekdayDate(time, dateLocale);
 
   const doubled = tickerItems.length > 0 ? [...tickerItems, ...tickerItems] : [];
+
+  const toggleFullscreen = async () => {
+    const root = document.documentElement;
+    const doc = document as Document & {
+      webkitFullscreenElement?: Element | null;
+      webkitExitFullscreen?: () => void;
+    };
+    const inFs = Boolean(document.fullscreenElement ?? doc.webkitFullscreenElement);
+    try {
+      if (!inFs) {
+        if (root.requestFullscreen) await root.requestFullscreen();
+        else {
+          const el = root as unknown as { webkitRequestFullscreen?: () => void };
+          el.webkitRequestFullscreen?.();
+        }
+      } else if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else {
+        doc.webkitExitFullscreen?.();
+      }
+    } catch {
+      /* 浏览器拒绝或环境不支持 */
+    }
+  };
 
   return (
     <div data-cmp="TopBar" className="flex w-full flex-col border-b border-border bg-panel">
@@ -392,6 +443,31 @@ export default function TopBar({
             writeClockSecondsPref(next);
           }}
         />
+
+        <button
+          type="button"
+          onClick={() => void toggleFullscreen()}
+          title={isFullscreen ? t("topBar.fullscreenExit") : t("topBar.fullscreenEnter")}
+          aria-label={t("topBar.fullscreenAria")}
+          aria-pressed={isFullscreen}
+          className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1.5 transition-colors hover:bg-muted"
+        >
+          {isFullscreen ? (
+            <Minimize2Icon size={15} className="shrink-0" />
+          ) : (
+            <Maximize2Icon size={15} className="shrink-0" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => bumpGlobalRefresh()}
+          title={t("topBar.refreshAll")}
+          aria-label={t("topBar.refreshAllAria")}
+          className="text-muted-foreground hover:text-foreground shrink-0 rounded p-1.5 transition-colors hover:bg-muted"
+        >
+          <RefreshCwIcon size={15} className="shrink-0" />
+        </button>
       </div>
 
       <div className="relative flex h-7 items-center overflow-hidden border-t border-border bg-panel-header">

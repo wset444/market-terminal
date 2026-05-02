@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { GripVertical, TrendingUpIcon, TrendingDownIcon, RefreshCwIcon } from "lucide-react";
+import { GripVertical, TrendingUpIcon, TrendingDownIcon } from "lucide-react";
+import { useGlobalRefresh } from "@/contexts/GlobalRefreshContext";
 import { useI18n } from "@/contexts/LocaleContext";
 import { reorderFavoriteCodes } from "@/services/stock/watchlistFavorites";
 
@@ -53,6 +54,7 @@ export default function PositionTable({
   onFavoritesReorder,
 }: PositionTableProps) {
   const { t } = useI18n();
+  const { generation } = useGlobalRefresh();
   const [rows, setRows] = useState<WatchlistPositionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
@@ -91,7 +93,7 @@ export default function PositionTable({
       clearTimeout(boot);
       clearInterval(id);
     };
-  }, [codesKey]);
+  }, [codesKey, generation]);
 
   const totalCost = rows.reduce((s, p) => s + p.avgCost * p.shares, 0);
   const totalValue = rows.reduce((s, p) => s + p.price * p.shares, 0);
@@ -129,14 +131,6 @@ export default function PositionTable({
           </div>
         </div>
         <div className="min-w-0 flex-1" />
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="text-muted-foreground hover:text-foreground flex shrink-0 items-center gap-1 text-xs transition-colors"
-        >
-          <RefreshCwIcon size={11} />
-          <span>{t("positionTable.refresh")}</span>
-        </button>
       </div>
 
       <div className="flex items-center border-b border-border bg-muted/30 px-4 py-1.5 text-xs text-muted-foreground">

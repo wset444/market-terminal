@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useGlobalRefresh } from "@/contexts/GlobalRefreshContext";
 import { useI18n } from "@/contexts/LocaleContext";
 import type { CsgoPopularRow } from "@/types/csgo";
 
@@ -14,6 +15,7 @@ type CsgoPopularPanelProps = {
  */
 export default function CsgoPopularPanel({ onPickItem, activeHash }: CsgoPopularPanelProps) {
   const { t } = useI18n();
+  const { generation } = useGlobalRefresh();
   const [rows, setRows] = useState<CsgoPopularRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -37,7 +39,7 @@ export default function CsgoPopularPanel({ onPickItem, activeHash }: CsgoPopular
       cancelled = true;
       clearInterval(id);
     };
-  }, []);
+  }, [generation]);
 
   return (
     <div data-cmp="CsgoPopularPanel" className="flex h-full flex-col">

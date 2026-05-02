@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BellIcon, ExternalLinkIcon } from "lucide-react";
+import { useGlobalRefresh } from "@/contexts/GlobalRefreshContext";
 import { useI18n } from "@/contexts/LocaleContext";
 import type { NewsItem } from "@/types/stock";
 
@@ -13,6 +14,7 @@ const NEWS_FETCH_SIZE = 12;
  */
 export default function NewsPanel() {
   const { t } = useI18n();
+  const { generation } = useGlobalRefresh();
   const [items, setItems] = useState<NewsItem[]>([]);
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export default function NewsPanel() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [generation]);
 
   return (
     <div data-cmp="NewsPanel" className="flex h-full min-h-0 flex-col overflow-hidden">

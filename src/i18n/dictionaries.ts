@@ -44,6 +44,11 @@ export const en: MessageDict = {
     langZh: "中文",
     langEn: "EN",
     langAria: "Switch language",
+    fullscreenEnter: "Full screen",
+    fullscreenExit: "Exit full screen",
+    fullscreenAria: "Toggle browser full screen",
+    refreshAll: "Refresh all",
+    refreshAllAria: "Reload all quotes and lists on this page (A-shares or CS2)",
   },
   units: {
     wanLotsSuffix: "k lots",
@@ -115,6 +120,7 @@ export const en: MessageDict = {
     terminalShape: "PC web (not a desktop app)",
     resizeOrderBookAria: "Resize order book column",
     resizeOrderBookRowAria: "Resize height: order book vs gainers list",
+    resizeRightMoneyFlowRowAria: "Resize height: money flow vs tick-by-tick list",
     resizeRightPanelAria: "Resize right quote panel (money flow, ticks)",
   },
   orderBook: {
@@ -294,6 +300,11 @@ export const zh: MessageDict = {
     langZh: "中文",
     langEn: "EN",
     langAria: "切换语言",
+    fullscreenEnter: "全屏",
+    fullscreenExit: "退出全屏",
+    fullscreenAria: "切换浏览器全屏显示",
+    refreshAll: "刷新全部",
+    refreshAllAria: "重新加载本页全部接口与列表（A 股或 CS2）",
   },
   units: {
     wanLotsSuffix: "万手",
@@ -365,6 +376,7 @@ export const zh: MessageDict = {
     terminalShape: "终端形态：PC 浏览器 Web（非独立客户端）",
     resizeOrderBookAria: "拖拽调整五档盘口区域宽度",
     resizeOrderBookRowAria: "拖拽调整五档与「涨幅榜」区域高度分界",
+    resizeRightMoneyFlowRowAria: "拖拽调整「资金流向」与「逐笔成交」区域高度分界",
     resizeRightPanelAria: "拖拽调整右侧行情区宽度（资金、逐笔）",
   },
   orderBook: {

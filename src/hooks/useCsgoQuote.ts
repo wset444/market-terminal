@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useGlobalRefresh } from "@/contexts/GlobalRefreshContext";
 import type { CsgoQuote } from "@/types/csgo";
 
 type UseCsgoQuoteOptions = {
@@ -27,6 +28,7 @@ export function useCsgoQuote({
   marketHashName,
   pollMs = 45_000,
 }: UseCsgoQuoteOptions): UseCsgoQuoteResult {
+  const { generation } = useGlobalRefresh();
   const [quote, setQuote] = useState<CsgoQuote | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,7 @@ export function useCsgoQuote({
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, generation]);
 
   useEffect(() => {
     if (pollMs <= 0 || !marketHashName.trim()) return;

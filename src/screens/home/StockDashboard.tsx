@@ -26,6 +26,7 @@ import {
   readStockLeftColWidth,
   readStockOrderbookHeight,
   readStockRightColWidth,
+  readStockRightMoneyFlowHeight,
   STOCK_LEFT_COL_DEFAULT,
   STOCK_LEFT_COL_MAX,
   STOCK_LEFT_COL_MIN,
@@ -35,17 +36,18 @@ import {
   STOCK_RIGHT_COL_DEFAULT,
   STOCK_RIGHT_COL_MAX,
   STOCK_RIGHT_COL_MIN,
+  STOCK_RIGHT_MONEY_FLOW_H_DEFAULT,
+  STOCK_RIGHT_MONEY_FLOW_H_MAX,
+  STOCK_RIGHT_MONEY_FLOW_H_MIN,
   writeStockLeftColWidth,
   writeStockOrderbookHeight,
   writeStockRightColWidth,
+  writeStockRightMoneyFlowHeight,
 } from "@/utils/layoutPrefs";
 
 /** 演示主图标的（6 位 A 股） */
 const DEMO_STOCK_CODE = `300750`;
 const FALLBACK_PRICE = 37.48;
-
-/** 右栏「资金流向」固定高度（px），其下逐笔 `flex-1` 占满剩余 */
-const RIGHT_COL_MONEY_FLOW_H = 265;
 
 /**
  * 与 `StockHeader` 周期按钮顺序一致：分时/1分/5分/15分/30分/60分/日K/周K/月K → 东财 klt
@@ -69,10 +71,14 @@ function clampStockOrderbookH(h: number): number {
   return Math.min(STOCK_ORDERBOOK_H_MAX, Math.max(STOCK_ORDERBOOK_H_MIN, h));
 }
 
+function clampRightMoneyFlowH(h: number): number {
+  return Math.min(STOCK_RIGHT_MONEY_FLOW_H_MAX, Math.max(STOCK_RIGHT_MONEY_FLOW_H_MIN, h));
+}
+
 /**
  * 股票看盘：模块数据均经 `/api/stock/*` 转发东财等接口；布局为 **PC Web**（min-width 1440），非桌面 exe。
  *
- * 左栏五档 + 涨幅榜（中间可拖高度）、右栏资金/逐笔；左/右栏宽度可通过竖向分隔条拖拽，`layoutPrefs` 持久化。
+ * 左栏五档 + 涨幅榜（中间可拖高度）；右栏资金流向 + 逐笔（中间可拖高度）；左/右栏宽度竖条拖拽；`layoutPrefs` 持久化。
  */
 export function StockDashboard({ initialStockCode }: StockDashboardProps) {
   const { t } = useI18n();
@@ -90,6 +96,9 @@ export function StockDashboard({ initialStockCode }: StockDashboardProps) {
 
   const [orderbookH, setOrderbookH] = useState(STOCK_ORDERBOOK_H_DEFAULT);
   const orderbookHRef = useRef(STOCK_ORDERBOOK_H_DEFAULT);
+
+  const [rightMoneyFlowH, setRightMoneyFlowH] = useState(STOCK_RIGHT_MONEY_FLOW_H_DEFAULT);
+  const rightMoneyFlowHRef = useRef(STOCK_RIGHT_MONEY_FLOW_H_DEFAULT);
 
   /**
    * 步骤：
@@ -116,6 +125,12 @@ export function StockDashboard({ initialStockCode }: StockDashboardProps) {
         orderbookHRef.current = n;
         setOrderbookH(n);
       }
+      const rm = readStockRightMoneyFlowHeight();
+      if (rm != null) {
+        const n = clampRightMoneyFlowH(rm);
+        rightMoneyFlowHRef.current = n;
+        setRightMoneyFlowH(n);
+      }
     }, 0);
     return () => clearTimeout(id);
   }, []);
@@ -127,6 +142,10 @@ export function StockDashboard({ initialStockCode }: StockDashboardProps) {
 
   const persistLeftRowHeights = useCallback(() => {
     writeStockOrderbookHeight(orderbookHRef.current);
+  }, []);
+
+  const persistRightRowHeights = useCallback(() => {
+    writeStockRightMoneyFlowHeight(rightMoneyFlowHRef.current);
   }, []);
 
   const onLeftDragDelta = useCallback((dx: number) => {
@@ -150,6 +169,15 @@ export function StockDashboard({ initialStockCode }: StockDashboardProps) {
     setOrderbookH((h) => {
       const n = clampStockOrderbookH(h + dy);
       orderbookHRef.current = n;
+      return n;
+    });
+  }, []);
+
+  /** 右栏资金流向与逐笔之间：拖动调整资金流向区高度 */
+  const onMoneyFlowTicksRowDrag = useCallback((dy: number) => {
+    setRightMoneyFlowH((h) => {
+      const n = clampRightMoneyFlowH(h + dy);
+      rightMoneyFlowHRef.current = n;
       return n;
     });
   }, []);
@@ -297,11 +325,18 @@ export function StockDashboard({ initialStockCode }: StockDashboardProps) {
           style={{ width: rightColW }}
         >
           <div
-            className="border-border flex shrink-0 flex-col overflow-hidden border-b"
-            style={{ height: RIGHT_COL_MONEY_FLOW_H }}
+            className="border-border flex min-h-0 shrink-0 flex-col overflow-hidden border-b"
+            style={{ height: rightMoneyFlowH }}
           >
             <MoneyFlow code={stockCode} />
           </div>
+
+          <RowResizeHandle
+            ariaLabel={t("stockDashboard.resizeRightMoneyFlowRowAria")}
+            onDragDelta={onMoneyFlowTicksRowDrag}
+            onDragComplete={persistRightRowHeights}
+          />
+
           <div className="border-border flex min-h-0 flex-1 flex-col overflow-hidden border-b">
             <TradeList code={stockCode} />
           </div>

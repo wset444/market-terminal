@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useGlobalRefresh } from "@/contexts/GlobalRefreshContext";
 import { useI18n } from "@/contexts/LocaleContext";
 import type { KlineBar } from "@/types/stock";
 
@@ -41,6 +42,7 @@ export default function KLineChart({
   source = "eastmoney",
 }: KLineChartProps) {
   const { t } = useI18n();
+  const { generation } = useGlobalRefresh();
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [bars, setBars] = useState<KlineBar[]>([]);
@@ -104,7 +106,7 @@ export default function KLineChart({
     return () => {
       cancelled = true;
     };
-  }, [code, klt, source]);
+  }, [code, klt, source, generation]);
 
   useLayoutEffect(() => {
     const el = containerRef.current;

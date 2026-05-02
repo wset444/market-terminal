@@ -98,6 +98,44 @@ export function writeStockOrderbookHeight(px: number): void {
   window.localStorage.setItem(STOCK_LEFT_ORDERBOOK_H_KEY, String(n));
 }
 
+/** A 股右栏：资金流向区高度（px），其下为逐笔（flex 占满剩余） */
+export const STOCK_RIGHT_MONEY_FLOW_H_KEY = "react-ai-stock-right-moneyflow-h";
+
+export const STOCK_RIGHT_MONEY_FLOW_H_DEFAULT = 265;
+export const STOCK_RIGHT_MONEY_FLOW_H_MIN = 200;
+export const STOCK_RIGHT_MONEY_FLOW_H_MAX = 520;
+
+/**
+ * 步骤：
+ * 1. 读 `STOCK_RIGHT_MONEY_FLOW_H_KEY`，解析为整数。
+ * 2. 非有限数或越界时返回 `null`。
+ */
+export function readStockRightMoneyFlowHeight(): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(STOCK_RIGHT_MONEY_FLOW_H_KEY);
+  const n = raw === null ? NaN : Number.parseInt(raw, 10);
+  if (
+    !Number.isFinite(n) ||
+    n < STOCK_RIGHT_MONEY_FLOW_H_MIN ||
+    n > STOCK_RIGHT_MONEY_FLOW_H_MAX
+  ) {
+    return null;
+  }
+  return n;
+}
+
+/**
+ * 步骤：写入右栏资金流向区高度；非浏览器或越界时静默忽略。
+ *
+ * @param px - 资金流向区域高度（px）
+ */
+export function writeStockRightMoneyFlowHeight(px: number): void {
+  if (typeof window === "undefined") return;
+  const n = Math.round(px);
+  if (n < STOCK_RIGHT_MONEY_FLOW_H_MIN || n > STOCK_RIGHT_MONEY_FLOW_H_MAX) return;
+  window.localStorage.setItem(STOCK_RIGHT_MONEY_FLOW_H_KEY, String(n));
+}
+
 /** CS2 看板左栏（五档占位）`localStorage` 键 */
 export const CSGO_LAYOUT_LEFT_COL_KEY = "react-ai-csgo-left-col-w";
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useGlobalRefresh } from "@/contexts/GlobalRefreshContext";
 import type { StockQuote } from "@/types/stock";
 
 type UseStockQuoteOptions = {
@@ -28,6 +29,7 @@ export function useStockQuote({
   code,
   pollMs = 60_000,
 }: UseStockQuoteOptions): UseStockQuoteResult {
+  const { generation } = useGlobalRefresh();
   const [quote, setQuote] = useState<StockQuote | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export function useStockQuote({
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, generation]);
 
   useEffect(() => {
     if (pollMs <= 0) return;

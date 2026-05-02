@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useGlobalRefresh } from "@/contexts/GlobalRefreshContext";
 import { useI18n } from "@/contexts/LocaleContext";
 import {
   AreaChart,
@@ -16,6 +17,9 @@ type MoneyFlowProps = {
   code: string;
 };
 
+/** 资金流向自动拉取间隔（ms），与 `TradeList` 一致为 120s */
+const FFLOW_POLL_MS = 120_000;
+
 /**
  * 将「元」按 1e8（亿 / 100M 量级）格式化，后缀由词典 `units.yiShort` 提供。
  *
@@ -30,35 +34,44 @@ function fmtYi(yuan: number, unit: string): string {
 
 /**
  * 资金流向：分时主力净额曲线 + 日汇总（东财 fflow 接口）。
+ * 自动每 **120s** 拉取；顶栏「刷新全部」通过 `GlobalRefreshContext` 也会触发重拉。
  */
 export default function MoneyFlow({ code }: MoneyFlowProps) {
   const { t } = useI18n();
+  const { generation } = useGlobalRefresh();
   const yiUnit = t("units.yiShort");
   const [intraday, setIntraday] = useState<FflowMinutePoint[]>([]);
   const [day, setDay] = useState<FflowDaySummary | null>(null);
 
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/stock/fflow?code=${encodeURIComponent(code)}&lmt=48`);
+      const j: unknown = await res.json();
+      if (!res.ok) return;
+      const intr = (j as { intraday?: FflowMinutePoint[] }).intraday;
+      const d = (j as { day?: FflowDaySummary | null }).day;
+      if (Array.isArray(intr)) setIntraday(intr);
+      if (d) setDay(d);
+    } catch {
+      /* ignore */
+    }
+  }, [code]);
+
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/stock/fflow?code=${encodeURIComponent(code)}&lmt=48`);
-        const j: unknown = await res.json();
-        if (!res.ok || cancelled) return;
-        const intr = (j as { intraday?: FflowMinutePoint[] }).intraday;
-        const d = (j as { day?: FflowDaySummary | null }).day;
-        if (Array.isArray(intr)) setIntraday(intr);
-        if (d) setDay(d);
-      } catch {
-        /* ignore */
-      }
+    const run = async () => {
+      if (cancelled) return;
+      await load();
     };
-    void load();
-    const id = setInterval(load, 8000);
+    void run();
+    const id = window.setInterval(() => {
+      if (!cancelled) void load();
+    }, FFLOW_POLL_MS);
     return () => {
       cancelled = true;
-      clearInterval(id);
+      window.clearInterval(id);
     };
-  }, [code]);
+  }, [code, generation, load]);
 
   const chartData = intraday.map((p) => ({
     t: p.timeLabel.length > 11 ? p.timeLabel.slice(11, 16) : p.timeLabel,
@@ -66,13 +79,15 @@ export default function MoneyFlow({ code }: MoneyFlowProps) {
   }));
 
   return (
-    <div data-cmp="MoneyFlow" className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border bg-panel-header px-3 py-2">
-        <span className="text-xs font-medium text-foreground">{t("moneyFlow.title")}</span>
-        <span className="text-xs text-muted-foreground">{t("moneyFlow.subtitle")}</span>
+    <div data-cmp="MoneyFlow" className="flex h-full min-h-0 flex-col">
+      <div className="border-border bg-panel-header flex shrink-0 items-center justify-between border-b px-3 py-2">
+        <span className="shrink-0 text-xs font-medium text-foreground">{t("moneyFlow.title")}</span>
+        <span className="max-w-[min(14rem,50vw)] truncate text-xs text-muted-foreground">
+          {t("moneyFlow.subtitle")}
+        </span>
       </div>
 
-      <div className="flex items-center gap-4 border-b border-border px-3 py-2">
+      <div className="flex shrink-0 items-center gap-4 border-b border-border px-3 py-2">
         <div>
           <div className="text-xs text-muted-foreground">{t("moneyFlow.dayMain")}</div>
           <div
@@ -91,7 +106,7 @@ export default function MoneyFlow({ code }: MoneyFlowProps) {
         </div>
       </div>
 
-      <div className="min-h-[100px] px-1 py-1" style={{ height: 100 }}>
+      <div className="min-h-[100px] shrink-0 px-1 py-1" style={{ height: 100 }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
             <defs>
@@ -129,7 +144,7 @@ export default function MoneyFlow({ code }: MoneyFlowProps) {
         </ResponsiveContainer>
       </div>
 
-      <div className="text-muted-foreground flex-1 px-3 py-2 text-xs leading-relaxed">
+      <div className="text-muted-foreground flex min-h-0 flex-1 px-3 py-2 text-xs leading-relaxed">
         {t("moneyFlow.disclaimer")}
       </div>
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useGlobalRefresh } from "@/contexts/GlobalRefreshContext";
 import { useI18n } from "@/contexts/LocaleContext";
 import type { MoverRow } from "@/types/stock";
 
@@ -9,6 +10,7 @@ import type { MoverRow } from "@/types/stock";
  */
 export default function SentimentPanel() {
   const { t } = useI18n();
+  const { generation } = useGlobalRefresh();
   const [movers, setMovers] = useState<MoverRow[]>([]);
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function SentimentPanel() {
       cancelled = true;
       clearInterval(id);
     };
-  }, []);
+  }, [generation]);
 
   return (
     <div data-cmp="SentimentPanel" className="flex h-full flex-col">
